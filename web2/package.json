@@ -1,7 +1,7 @@
 {
   "name": "social-worker-app",
   "version": "0.1.0",
-  "homepage": "https://chaaaaae.github.io/patient_survey/web2",
+  "homepage": "https://yechan-00.github.io/patient-servey/web2",
   "private": true,
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
