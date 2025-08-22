@@ -1,0 +1,109 @@
+name: prototype 1 deploy to GitHub Pages
+
+# 워크플로우 트리거 설정
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 최소 권한 설정
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 작업 정의
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install web1 dependencies
+        run: npm ci
+        working-directory: ./web1
+
+      - name: Build web1
+        run: CI=false npm run build
+        working-directory: ./web1
+
+      - name: Install web2 dependencies
+        run: npm ci
+        working-directory: ./web2
+
+      - name: Build web2
+        run: CI=false npm run build
+        working-directory: ./web2
+
+      - name: Collate build outputs
+        run: |
+          mkdir -p dist
+
+          echo "Copying web1 build output..."
+          if [ -d "web1/build" ]; then
+            cp -r web1/build dist/web1
+          elif [ -d "web1/dist" ]; then
+            cp -r web1/dist dist/web1
+          else
+            echo "Error: web1 build output directory not found"
+            exit 1
+          fi
+
+          echo "Copying web2 build output..."
+          if [ -d "web2/build" ]; then
+            cp -r web2/build dist/web2
+          elif [ -d "web2/dist" ]; then
+            cp -r web2/dist dist/web2
+          else
+            echo "Error: web2 build output directory not found"
+            exit 1
+          fi
+
+          echo "Creating root index.html..."
+          cat > dist/index.html << 'EOL'
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8" />
+              <title>Patient Survey Project</title>
+              <style>
+                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; text-align: center; }
+                .container { max-width: 800px; margin: 0 auto; }
+                .app-link { display: inline-block; margin: 20px; padding: 15px 30px; background-color: #0078d4; color: white; 
+                            text-decoration: none; border-radius: 4px; font-weight: bold; }
+                .app-link:hover { background-color: #005a9e; }
+              </style>
+              <meta http-equiv="refresh" content="0;url=web1/" />
+            </head>
+            <body>
+              <div class="container">
+                <h1>Patient Survey Project</h1>
+                <p>자동으로 Web1으로 이동합니다. 이동하지 않으면 아래 링크를 클릭하세요.</p>
+                <a class="app-link" href="web1/">Web1 앱으로 이동</a>
+                <a class="app-link" href="web2/">Web2 앱으로 이동</a>
+              </div>
+            </body>
+          </html>
+          EOL
+
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
