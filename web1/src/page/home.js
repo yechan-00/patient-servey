@@ -1,9 +1,9 @@
 // src/page/home.js
-import React from 'react';
+import React, { useState } from 'react';
 // ⬇️ import 추가
 import { useNavigate } from 'react-router-dom';
 
-import { Box, Container, Typography, Paper } from '@mui/material';
+import { Box, Container, Typography, Paper, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import {
   HeaderSection,
   CardContainer,
@@ -16,12 +16,13 @@ const Home = () => {
   const handleStart = () => {
     console.log('설문 시작!');
   };
-// ⬇️ 컴포넌트 내부에서 navigate 함수 선언
-const navigate = useNavigate();
+  // ⬇️ 컴포넌트 내부에서 navigate 함수 선언
+  const navigate = useNavigate();
+  const [openConfirm, setOpenConfirm] = useState(false);
 
-const goToSurvey = () => {
-  navigate('/info'); // "/info" 경로로 이동
-};
+  const goToSurvey = () => {
+    navigate('/info'); // "/info" 경로로 이동
+  };
 
   return (
     <Box
@@ -62,6 +63,36 @@ const goToSurvey = () => {
         </Paper>
         <FooterCopyright />
       </Container>
+      <Button
+        variant="contained"
+        color="secondary"
+        size="small"
+        onClick={() => setOpenConfirm(true)}
+        sx={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          borderRadius: 2,
+          fontSize: '0.8rem',
+          fontWeight: 500,
+          zIndex: 1000,
+        }}
+      >
+        상담 신청
+      </Button>
+      <Dialog open={openConfirm} onClose={() => setOpenConfirm(false)} aria-labelledby="consult-confirm-title">
+        <DialogTitle id="consult-confirm-title">상담 신청 전에 안내드립니다</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            설문을 먼저 완료하시면 현재 심리·건강 상태를 바탕으로 더 정확한 상담이 가능합니다. 설문 결과는 담당 사회복지사에게 자동으로 전달되어 추가 질문 없이 바로 상담을 시작할 수 있어요.
+            설문 없이 바로 상담을 신청하시면 필요한 정보가 없어 확인 질문이 늘어나 상담이 지연될 수 있습니다. 그래도 지금 바로 상담을 신청하시겠어요?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenConfirm(false)}>설문 먼저 하기</Button>
+          <Button variant="contained" onClick={() => { setOpenConfirm(false); navigate('/counseling'); }}>바로 상담 신청</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

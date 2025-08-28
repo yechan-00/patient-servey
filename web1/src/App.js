@@ -8,6 +8,7 @@ import theme from './theme';
 import Home from './page/home';
 import Info from './page/info';
 
+import CounselingRequestForm from "./component/CounselingRequestForm";
 import Section1Page from './page/Section1Page';
 import Section2Page from './page/Section2Page';
 import Section3Page from './page/Section3Page';
@@ -21,13 +22,14 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router basename="/patient_survey/web1">
+      <Router basename={process.env.PUBLIC_URL}>
         <Routes>
           {/* 메인 화면 */}
           <Route path="/" element={<Home />} />
           <Route path="/info" element={<Info />} />
 
           {/* 7개 섹션 페이지 */}
+          <Route path="/counseling" element={<CounselingRequestForm />} />
           <Route path="/section1" element={<Section1Page />} />
           <Route path="/section2" element={<Section2Page />} />
           <Route path="/section3" element={<Section3Page />} />
@@ -37,7 +39,7 @@ function App() {
           <Route path="/section7" element={<Section7Page />} />
 
           {/* 설문 결과 페이지 */}
-+         <Route path="/survey-result" element={<SurveyResultPage />} />
+         <Route path="/survey-result" element={<SurveyResultPage />} />
         </Routes>
       </Router>
     </ThemeProvider>

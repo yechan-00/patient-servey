@@ -201,9 +201,10 @@ const SurveyForm = () => {
               <FormControl fullWidth error={!!errors.maritalStatus}>
                 <InputLabel>결혼 상태를 선택하세요</InputLabel>
                 <Select value={maritalStatus} onChange={(e) => setMaritalStatus(e.target.value)} label="결혼 상태">
-                  <MenuItem value="미혼">미혼</MenuItem>
-                  <MenuItem value="결혼">결혼</MenuItem>
-                  <MenuItem value="기타">기타</MenuItem>
+                  <MenuItem value="single">미혼</MenuItem>
+                  <MenuItem value="married">결혼</MenuItem>
+                  <MenuItem value="dicorced">이혼</MenuItem>
+                  <MenuItem value="bereaved">사별</MenuItem>
                 </Select>
                 <FormHelperText>{errors.maritalStatus}</FormHelperText>
               </FormControl>
