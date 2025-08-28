@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Grid, Typography, Container, Paper } from '@mui/material';
+import { Box, Grid, Typography, Container, Paper, Button } from '@mui/material';
 import { Radar, Bar } from 'react-chartjs-2';
 import {
   Chart,
@@ -13,6 +13,7 @@ import {
   LinearScale,
   BarElement
 } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 import * as SurveyUtils from '../utils/SurveyUtils';
 
@@ -28,6 +29,7 @@ Chart.register(
   LinearScale,
   BarElement
 );
+Chart.register(ChartDataLabels);
 
 // 레이블 및 매핑
 const labelMap = {
@@ -134,9 +136,22 @@ const SurveyResult = ({
   };
   const barOptions = {
     responsive: true,
-    plugins: { legend: { position: 'top' } },
+    indexAxis: 'x', // 세로 막대
+    plugins: {
+      legend: { position: 'top' },
+      datalabels: {
+        anchor: 'end',
+        align: 'end',
+        offset: 2,
+        color: '#000',
+        clip: false,
+        formatter: (v, ctx) => (ctx.datasetIndex === 0 ? `${Math.round(v)}점` : ''),
+        font: { weight: '700' }
+      }
+    },
     scales: {
-      y: { beginAtZero: true, max: 100, ticks: { stepSize: 10 } }
+      y: { beginAtZero: true, max: 100, ticks: { stepSize: 10 } },
+      x: { ticks: { autoSkip: false } }
     }
   };
 
@@ -216,7 +231,7 @@ const SurveyResult = ({
                 justifyContent: 'center',
                 alignItems: 'center',
                 width: '100%',
-                height: 500,
+                height: 400,
                 maxWidth: 800,
                 mx: 'auto'
               }}
@@ -266,6 +281,17 @@ const SurveyResult = ({
             </Paper>
           </Box>
 
+          {/* 점수 해석 기준 */}
+          <Paper elevation={1} sx={{ p: 3, mb: 4 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.dark', mb: 1 }}>
+              점수 해석 기준
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              이 화면의 점수는 T-점수(집단 평균 50, 표준편차 10) 기준으로 표현됩니다. 막대가 길수록 해당 영역의 위험 또는 부담이 상대적으로 높음을 의미합니다.
+              위험도 분류는 설문 알고리즘과 동일한 규칙이 적용됩니다. (세부 기준은 알고리즘에 준함)
+            </Typography>
+          </Paper>
+
           {/* 3. 피드백 카드 그리드 */}
           <Grid container spacing={2} direction="column">
             {/* 전체 피드백 카드 */}
@@ -299,26 +325,61 @@ const SurveyResult = ({
                     추가 피드백
                   </Typography>
                   {additionalComments.map(({ text, style }, idx) => (
-                    <Typography
-                      key={idx}
-                      variant="body2"
-                      align="center"
-                      sx={{
-                        mb: 0.5,
-                        color:
-                          style === 'error'
-                            ? 'error.main'
-                            : style === 'info'
-                            ? 'primary.main'
-                            : style === 'success'
-                            ? 'success.main'
-                            : 'text.primary',
-                        fontWeight: 'bold'
-                      }}
+  <Typography
+    key={idx}
+    variant="body2"
+    align="center"
+    sx={{
+      mb: 0.5,
+      color:
+        style === 'error'
+          ? 'error.main'
+          : style === 'info'
+          ? 'primary.main'
+          : style === 'success'
+          ? 'success.main'
+          : 'text.primary',
+      fontWeight: 'bold'
+    }}
+  >
+    {text}
+  </Typography>
+))}
+                </Paper>
+              </Grid>
+            )}
+            {/* 맞춤 지원 서비스: 고위험 집단만 노출 */}
+            {overallRiskGroup === '고위험' && (
+              <Grid item xs={12}>
+                <Paper elevation={1} sx={{ p: 3, borderLeft: '4px solid #d32f2f' }}>
+                  <Typography
+                    variant="subtitle1"
+                    align="center"
+                    sx={{ fontWeight: 'bold', mb: 1, color: 'error.dark' }}
+                  >
+                    맞춤 지원 서비스 (고위험)
+                  </Typography>
+                  <Typography variant="body2" align="center" color="text.secondary" sx={{ mb: 2 }}>
+                    현재 결과에 따라 우선적인 상담 연계를 권장합니다. 아래 버튼을 통해 상담을 신청하시거나, 지역 자원을 확인해 주세요.
+                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      href={`${process.env.PUBLIC_URL}/counseling`}
                     >
-                      {text}
-                    </Typography>
-                  ))}
+                      상담 신청 바로가기
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      href="https://www.ncmh.go.kr/kor/index.do"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      정신건강복지센터 안내
+                    </Button>
+                  </Box>
                 </Paper>
               </Grid>
             )}

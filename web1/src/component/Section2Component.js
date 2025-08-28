@@ -128,8 +128,7 @@ const Section2Component = ({ name, answers, setAnswers, setValidationError, vali
                   <Box component="span" sx={{ fontSize: '1.2em', mr: 1 }}>※</Box>
                   <Box component="span" sx={{ color: '#1976d2', fontWeight: 700, fontSize: '1.05em', mr: 1 }}>안내</Box>
                   <Box component="span" sx={{ color: '#333' }}>
-                    <span role="img" aria-label="down">👇</span> <b>1번, 2번</b>을 선택하신 경우, 아래 이유 중 해당되는 항목을 모두 선택해 주세요.<br/>
-                    <span role="img" aria-label="fast-forward">⏩</span> <b>3번, 4번, 5번</b>을 선택하신 경우, <Box component="span" sx={{ color: '#1976d2', fontWeight: 600, display: 'inline' }}>26번(생활습관) 문항</Box>으로 자동 이동합니다.
+                    '그렇지않다'를 누르면 추가 질문(12-1번)이 나타납니다
                   </Box>
                 </Typography>
               </Box>
