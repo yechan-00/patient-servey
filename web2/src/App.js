@@ -18,7 +18,6 @@ import DashboardPage from "./pages/DashboardPage";
 import PatientDetailPage from "./pages/PatientDetailPage";
 import CounselingRecordPage from "./pages/CounselingRecordPage";
 import ProfilePage from "./pages/ProfilePage";
-console.log("hi");
 // 인증 필요한 라우트를 위한 컴포넌트
 function PrivateRoute({ children }) {
   const { currentUser } = useAuth();
