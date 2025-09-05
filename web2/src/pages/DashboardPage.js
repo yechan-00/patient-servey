@@ -216,6 +216,40 @@ const SearchInput = styled.input`
 const PatientTable = styled.table`
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+`;
+
+const ColumnWidths = styled.colgroup`
+  col:nth-child(1) {
+    width: 7rem;
+  } /* 이름 */
+  col:nth-child(2) {
+    width: 6.5rem;
+  } /* 암 종류 */
+  col:nth-child(3) {
+    width: 7.5rem;
+  } /* 생년월일 */
+  col:nth-child(4) {
+    width: 7.5rem;
+  } /* 진단 시기 */
+  col:nth-child(5) {
+    width: 5.5rem;
+  } /* 위험도 */
+  col:nth-child(6) {
+    width: 6rem;
+  } /* 상담 기록 */
+  col:nth-child(7) {
+    width: 6rem;
+  } /* 상담 요청 */
+  col:nth-child(8) {
+    width: 6rem;
+  } /* 상담 상태 */
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.lg}) {
+    col:nth-child(1) {
+      width: 6.5rem;
+    }
+  }
 `;
 
 // 테이블 헤더
@@ -226,10 +260,13 @@ const TableHeader = styled.thead`
 // 헤더 셀
 const HeaderCell = styled.th`
   text-align: left;
-  padding: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.spacing.sm};
   font-weight: 600;
   color: ${({ theme }) => theme.colors.neutral.darkGrey};
   font-size: ${({ theme }) => theme.fontSize.sm};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 // 테이블 바디
@@ -247,9 +284,13 @@ const TableRow = styled.tr`
 
 // 테이블 셀
 const TableCell = styled.td`
-  padding: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.spacing.sm};
   color: ${({ theme }) => theme.colors.neutral.text};
   font-size: ${({ theme }) => theme.fontSize.sm};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: keep-all;
 `;
 
 // 링크 스타일
@@ -257,6 +298,11 @@ const StyledLink = styled(Link)`
   color: ${({ theme }) => theme.colors.primary.main};
   text-decoration: none;
   font-weight: 500;
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   &:hover {
     text-decoration: underline;
@@ -961,9 +1007,18 @@ function DashboardPage() {
 
             <CardContent>
               <PatientTable>
+                <ColumnWidths>
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                </ColumnWidths>
                 <TableHeader>
                   <tr>
-                    <HeaderCell>ID</HeaderCell>
                     <HeaderCell>이름</HeaderCell>
                     <HeaderCell>암 종류</HeaderCell>
                     <HeaderCell>생년월일</HeaderCell>
@@ -992,7 +1047,6 @@ function DashboardPage() {
                       )
                       .map((patient) => (
                         <TableRow key={patient.id}>
-                          <TableCell>{patient.id.substring(0, 8)}...</TableCell>
                           <TableCell>
                             <StyledLink to={`/patients/${patient.id}`}>
                               {patient.name || "익명"}
