@@ -23,7 +23,7 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router basename="/patient_survey/web1">
+      <Router basename="/patient-survey/web1">
         <ScrollToTop />
         <Routes>
           {/* 메인 화면 */}
