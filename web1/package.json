@@ -1,7 +1,7 @@
 {
   "name": "goddai_web",
   "version": "0.1.0",
-  "homepage": "https://yechan-00.github.io/patient_survey/web1",
+  "homepage": "https://yechan-00.github.io/patient_servey/web1",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.14.0",
