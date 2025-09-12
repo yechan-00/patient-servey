@@ -8,6 +8,7 @@ import {
   Button,
   Chip,
   Divider,
+  Link,
 } from "@mui/material";
 import {
   Phone,
@@ -16,6 +17,7 @@ import {
   Psychology,
   Group,
   Work,
+  Launch,
 } from "@mui/icons-material";
 import * as SurveyUtils from "../utils/SurveyUtils";
 
@@ -46,6 +48,18 @@ const supportInfo = {
       { name: "의료진 상담", phone: "병원 주치의", icon: <LocalHospital /> },
       { name: "재활치료센터", phone: "1577-0199", icon: <LocalHospital /> },
       { name: "영양상담", phone: "병원 영양과", icon: <LocalHospital /> },
+      {
+        name: "지역 보건소 건강생활지원센터",
+        phone: "보건소",
+        icon: <LocalHospital />,
+        url: "https://www.safekorea.go.kr/idsiSFK/neo/sfk/cs/ppn/tel/healthUserList.html?menuSeq=149",
+      },
+      {
+        name: "암 생존자 통합지지센터",
+        phone: "통합지지센터",
+        icon: <LocalHospital />,
+        url: "https://www.cancer.go.kr/lay1/S1T786C841/contents.do",
+      },
     ],
     resources: "신체 증상 관리 가이드북 다운로드",
   },
@@ -68,6 +82,18 @@ const supportInfo = {
       { name: "암환자 자조모임", phone: "1588-5587", icon: <Group /> },
       { name: "가족상담센터", phone: "1577-9337", icon: <Group /> },
       { name: "종교기관 상담", phone: "해당 종교기관", icon: <Group /> },
+      {
+        name: "암생존자 통합지지센터",
+        phone: "통합지지센터",
+        icon: <Group />,
+        url: "https://www.cancer.go.kr/lay1/S1T786C841/contents.do",
+      },
+      {
+        name: "한국암재활협회",
+        phone: "협회 안내",
+        icon: <Group />,
+        url: "https://www.kcrs.co.kr/main/main.html",
+      },
     ],
     resources: "가족 소통 가이드 다운로드",
   },
@@ -90,6 +116,18 @@ const supportInfo = {
         icon: <LocalHospital />,
       },
       { name: "금연상담", phone: "1588-3030", icon: <LocalHospital /> },
+      {
+        name: "보건소 건강증진센터",
+        phone: "보건소",
+        icon: <LocalHospital />,
+        url: "",
+      },
+      {
+        name: "병원 의료사회복지팀",
+        phone: "병원 사회복지팀",
+        icon: <LocalHospital />,
+        url: "",
+      },
     ],
     resources: "건강관리 실천 가이드 다운로드",
   },
@@ -99,6 +137,18 @@ const supportInfo = {
       { name: "상담심리센터", phone: "1577-0199", icon: <Psychology /> },
       { name: "명상센터", phone: "지역 명상센터", icon: <Psychology /> },
       { name: "요가/힐링센터", phone: "지역 센터", icon: <Psychology /> },
+      {
+        name: "암 생존자 통합지지센터",
+        phone: "통합지지센터",
+        icon: <Psychology />,
+        url: "https://www.cancer.go.kr/lay1/S1T786C841/contents.do",
+      },
+      {
+        name: "병원 의료사회복지팀",
+        phone: "병원 사회복지팀",
+        icon: <Psychology />,
+        url: "",
+      },
     ],
     resources: "긍정적 사고 강화 가이드 다운로드",
   },
@@ -572,20 +622,43 @@ const SurveyResult = ({
                               p: 2,
                               backgroundColor: "white",
                               borderRadius: 1,
-                              display: "flex",
-                              alignItems: "center",
                               gap: 1,
                               minHeight: 60,
                             }}
                           >
                             {contact.icon}
                             <Box>
-                              <Typography
-                                variant="body2"
-                                sx={{ fontWeight: "bold", fontSize: "0.85rem" }}
-                              >
-                                {contact.name}
-                              </Typography>
+                              {contact.url ? (
+                                <Link
+                                  href={contact.url}
+                                  target="_blank"
+                                  rel="noopener"
+                                  underline="hover"
+                                  sx={{
+                                    fontWeight: "bold",
+                                    fontSize: "0.85rem",
+                                    gap: 0.5,
+                                  }}
+                                >
+                                  {contact.name}
+                                  <Launch
+                                    sx={{
+                                      fontSize: 16,
+                                      color: "text.secondary",
+                                    }}
+                                  />
+                                </Link>
+                              ) : (
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: "bold",
+                                    fontSize: "0.85rem",
+                                  }}
+                                >
+                                  {contact.name}
+                                </Typography>
+                              )}
                               <Typography
                                 variant="caption"
                                 sx={{

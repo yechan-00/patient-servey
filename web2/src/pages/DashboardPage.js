@@ -216,6 +216,37 @@ const SearchInput = styled.input`
 const PatientTable = styled.table`
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+`;
+
+const ColumnWidths = styled.colgroup`
+  col:nth-child(1) {
+    width: 7rem;
+  } /* 이름 */
+  col:nth-child(2) {
+    width: 7.5rem;
+  } /* 생년월일 */
+  col:nth-child(3) {
+    width: 6.5rem;
+  } /* 암 종류 */
+  col:nth-child(4) {
+    width: 7.5rem;
+  } /* 진단 시기 */
+  col:nth-child(5) {
+    width: 5.5rem;
+  } /* 위험도 */
+  col:nth-child(6) {
+    width: 6rem;
+  } /* 상담 요청 */
+  col:nth-child(7) {
+    width: 6rem;
+  } /* 상담 상태 */
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.lg}) {
+    col:nth-child(1) {
+      width: 6.5rem;
+    }
+  }
 `;
 
 // 테이블 헤더
@@ -226,10 +257,13 @@ const TableHeader = styled.thead`
 // 헤더 셀
 const HeaderCell = styled.th`
   text-align: left;
-  padding: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.spacing.sm};
   font-weight: 600;
   color: ${({ theme }) => theme.colors.neutral.darkGrey};
   font-size: ${({ theme }) => theme.fontSize.sm};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 // 테이블 바디
@@ -247,9 +281,13 @@ const TableRow = styled.tr`
 
 // 테이블 셀
 const TableCell = styled.td`
-  padding: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.spacing.sm};
   color: ${({ theme }) => theme.colors.neutral.text};
   font-size: ${({ theme }) => theme.fontSize.sm};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: keep-all;
 `;
 
 // 링크 스타일
@@ -257,6 +295,11 @@ const StyledLink = styled(Link)`
   color: ${({ theme }) => theme.colors.primary.main};
   text-decoration: none;
   font-weight: 500;
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   &:hover {
     text-decoration: underline;
@@ -446,6 +489,28 @@ function DashboardPage() {
 
         let newPatients = 0;
 
+        // --- 상담 요청 최신 상태 맵 구성 (userId 기준 최신 1건) ---
+        const requestsSnap = await getDocs(
+          query(
+            collection(db, "counselingRequests"),
+            orderBy("createdAt", "desc")
+          )
+        );
+
+        const latestRequestByUser = new Map();
+        requestsSnap.forEach((d) => {
+          const r = d.data();
+          const uid = r.userId;
+          // createdAt 내림차순으로 가져왔으므로, 최초로 만난 문서가 최신
+          if (!latestRequestByUser.has(uid)) {
+            latestRequestByUser.set(uid, {
+              id: d.id,
+              status: r.status || "pending",
+              createdAt: r.createdAt?.toDate?.() || new Date(),
+            });
+          }
+        });
+
         usersSnapshot.forEach((doc) => {
           const userData = doc.data();
 
@@ -564,10 +629,19 @@ function DashboardPage() {
               newPatients++;
             }
 
+            // 최신 상담요청 상태 매핑 (있으면 '요청됨' 처리)
+            const latest = latestRequestByUser.get(doc.id);
+            const requested = !!latest;
+            const consultStatus = latest
+              ? getRequestStatusText(latest.status)
+              : undefined;
+
             patientsData.push({
               ...patient,
               riskLevel,
               averageNewScore,
+              requested,
+              consultStatus,
             });
 
             totalPatients++;
@@ -961,17 +1035,24 @@ function DashboardPage() {
 
             <CardContent>
               <PatientTable>
+                <ColumnWidths>
+                  <col /> {/* 1. 이름 */}
+                  <col /> {/* 2. 생년월일 */}
+                  <col /> {/* 3. 암 종류 */}
+                  <col /> {/* 4. 진단 시기 */}
+                  <col /> {/* 5. 위험도 */}
+                  <col /> {/* 6. 상담 요청 */}
+                  <col /> {/* 7. 상담 상태 */}
+                </ColumnWidths>
                 <TableHeader>
                   <tr>
-                    <HeaderCell>ID</HeaderCell>
                     <HeaderCell>이름</HeaderCell>
-                    <HeaderCell>암 종류</HeaderCell>
                     <HeaderCell>생년월일</HeaderCell>
+                    <HeaderCell>암 종류</HeaderCell>
                     <HeaderCell>진단 시기</HeaderCell>
                     <HeaderCell>위험도</HeaderCell>
-                    <HeaderCell>상담 기록</HeaderCell>
                     <HeaderCell>상담 요청</HeaderCell>
-                    <HeaderCell>상담 상태</HeaderCell>
+                    <HeaderCell>상담 상태</HeaderCell>{" "}
                   </tr>
                 </TableHeader>
                 <TableBody>
@@ -992,16 +1073,15 @@ function DashboardPage() {
                       )
                       .map((patient) => (
                         <TableRow key={patient.id}>
-                          <TableCell>{patient.id.substring(0, 8)}...</TableCell>
                           <TableCell>
                             <StyledLink to={`/patients/${patient.id}`}>
                               {patient.name || "익명"}
                             </StyledLink>
                           </TableCell>
-                          <TableCell>{patient.cancerType}</TableCell>
                           <TableCell>
                             {formatBirthDate(patient.birthDate)}
                           </TableCell>
+                          <TableCell>{patient.cancerType}</TableCell>
                           <TableCell>
                             {patient.diagnosisDate || "정보 없음"}
                           </TableCell>
@@ -1015,14 +1095,6 @@ function DashboardPage() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <StyledLink
-                              to={`/patients/${patient.id}?tab=counseling`}
-                            >
-                              상세 보기
-                            </StyledLink>
-                          </TableCell>
-
-                          <TableCell style={{ textAlign: "center" }}>
                             {patient.requested ? (
                               <span
                                 style={{
@@ -1053,7 +1125,6 @@ function DashboardPage() {
                               </span>
                             )}
                           </TableCell>
-
                           <TableCell style={{ textAlign: "center" }}>
                             <span style={{ fontSize: 12, fontWeight: 600 }}>
                               {patient.consultStatus
