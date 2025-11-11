@@ -31,7 +31,7 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <GlobalStyle />
       <AuthProvider>
-        <Router basename="/patient-servey/web2">
+        <Router>
           <Routes>
             {/* 공개 경로 */}
             <Route path="/login" element={<LoginPage />} />
