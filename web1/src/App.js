@@ -22,7 +22,7 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
+      <Router basename="/patient-servey/web1">
         <ScrollToTop />
 
         {/* ✅ 설문 관련 페이지 전체를 Provider로 감쌈 */}
