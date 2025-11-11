@@ -1,8 +1,8 @@
 // src/components/Layout.js
-import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import styled from 'styled-components';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import styled from "styled-components";
+import { useAuth } from "../contexts/AuthContext";
 
 // 전체 레이아웃 컨테이너
 const LayoutContainer = styled.div`
@@ -12,7 +12,8 @@ const LayoutContainer = styled.div`
 
 // 사이드바 컨테이너
 const Sidebar = styled.div`
-  width: 250px;
+  width: 240px;
+  min-width: 240px;
   background-color: #2a5e8c;
   color: white;
   padding: 1.5rem 0;
@@ -20,10 +21,11 @@ const Sidebar = styled.div`
   display: flex;
   flex-direction: column;
   transition: all 0.3s ease;
-  
+  overflow: hidden; /* 내부 요소가 넘칠 때 깔끔하게 */
+
   @media (max-width: 768px) {
     position: fixed;
-    left: ${props => props.isOpen ? '0' : '-250px'};
+    left: ${(props) => (props.isOpen ? "0" : "-240px")};
     z-index: 1000;
     height: 100vh;
   }
@@ -34,7 +36,7 @@ const MainContent = styled.div`
   flex: 1;
   background-color: #f8f9fa;
   padding: 1.5rem;
-  
+
   @media (max-width: 768px) {
     margin-left: 0;
     width: 100%;
@@ -55,6 +57,10 @@ const LogoText = styled.h1`
   font-weight: 700;
   color: white;
   margin: 0;
+  white-space: nowrap; /* 한 줄 유지 */
+  word-break: keep-all; /* 한국어 단어 중간 줄바꿈 방지 */
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 // 내비게이션 메뉴
@@ -76,6 +82,10 @@ const NavGroupTitle = styled.h2`
   margin: 0 1.5rem 0.5rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 // 메뉴 아이템
@@ -87,12 +97,12 @@ const NavItem = styled(Link)`
   text-decoration: none;
   transition: all 0.3s ease;
   border-left: 3px solid transparent;
-  
+
   &:hover {
     background-color: rgba(255, 255, 255, 0.1);
     color: white;
   }
-  
+
   &.active {
     background-color: rgba(255, 255, 255, 0.1);
     border-left-color: white;
@@ -105,6 +115,17 @@ const Icon = styled.span`
   margin-right: 0.75rem;
   width: 20px;
   text-align: center;
+`;
+
+// 메뉴 텍스트: 한국어 단어 중간 줄바꿈 방지 + 길면 말줄임
+const MenuText = styled.span`
+  display: inline-block;
+  max-width: 180px; /* 사이드바 폭(250px) - 아이콘/패딩 고려 */
+  white-space: nowrap; /* 줄바꿈 금지 */
+  word-break: keep-all; /* 한국어 단어 중간 끊김 방지 */
+  overflow: hidden; /* 넘치면 숨김 */
+  text-overflow: ellipsis; /* 말줄임표 */
+  line-height: 1.2;
 `;
 
 // 사용자 프로필 영역
@@ -156,7 +177,7 @@ const LogoutButton = styled.button`
   padding: 0;
   font-size: 0.9rem;
   margin-left: 0.5rem;
-  
+
   &:hover {
     color: white;
   }
@@ -175,7 +196,7 @@ const MobileToggle = styled.button`
   border-radius: 4px;
   padding: 0.5rem;
   cursor: pointer;
-  
+
   @media (max-width: 768px) {
     display: block;
   }
@@ -211,71 +232,83 @@ function Layout({ children, title }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   // 경로가 현재 활성화되어 있는지 확인
   const isActive = (path) => {
     return location.pathname === path;
   };
-  
+
   // 로그아웃 처리
   const handleLogout = async () => {
     try {
       await signOut();
-      navigate('/login');
+      navigate("/login");
     } catch (error) {
       console.error("로그아웃 오류:", error);
     }
   };
-  
+
   // 사용자 이니셜 가져오기
   const getInitials = () => {
-    if (!currentUser || !socialWorkerData || !socialWorkerData.name) return '?';
-    
-    const nameParts = socialWorkerData.name.split(' ');
+    if (!currentUser || !socialWorkerData || !socialWorkerData.name) return "?";
+
+    const nameParts = socialWorkerData.name.split(" ");
     if (nameParts.length >= 2) {
       return `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase();
     }
-    
+
     return socialWorkerData.name[0].toUpperCase();
   };
-  
+
   return (
     <LayoutContainer>
       <MobileToggle onClick={() => setSidebarOpen(!sidebarOpen)}>
-        {sidebarOpen ? '×' : '☰'}
+        {sidebarOpen ? "×" : "☰"}
       </MobileToggle>
-      
+
       <Sidebar isOpen={sidebarOpen}>
         <Logo>
           <LogoText>암 생존자 케어</LogoText>
         </Logo>
-        
+
         <Nav>
           <NavGroup>
             <NavGroupTitle>환자 관리</NavGroupTitle>
-            <NavItem to="/" className={isActive('/') ? 'active' : ''}>
-              <Icon>📊</Icon> 환자 대시보드
+            <NavItem to="/" className={isActive("/") ? "active" : ""}>
+              <Icon>📊</Icon> <MenuText>환자 대시보드</MenuText>
             </NavItem>
           </NavGroup>
-          
+          <NavGroup>
+            <NavGroupTitle>보관</NavGroupTitle>
+            <NavItem
+              to="/archived"
+              className={isActive("/archived") ? "active" : ""}
+            >
+              <Icon>🗂️</Icon> <MenuText>보관 환자</MenuText>
+            </NavItem>
+          </NavGroup>
+
           <NavGroup>
             <NavGroupTitle>설정</NavGroupTitle>
-            <NavItem to="/profile" className={isActive('/profile') ? 'active' : ''}>
-              <Icon>👤</Icon> 내 프로필
+            <NavItem
+              to="/profile"
+              className={isActive("/profile") ? "active" : ""}
+            >
+              <Icon>👤</Icon> <MenuText>내 프로필</MenuText>
             </NavItem>
           </NavGroup>
         </Nav>
-        
+
         <UserProfile>
           <ProfilePic>{getInitials()}</ProfilePic>
           <UserInfo>
-            <UserName>{socialWorkerData?.name || '사용자'}</UserName>
+            <UserName>{socialWorkerData?.name || "사용자"}</UserName>
             <UserRole>사회복지사</UserRole>
           </UserInfo>
           <LogoutButton onClick={handleLogout}>로그아웃</LogoutButton>
         </UserProfile>
       </Sidebar>
-      
+
       <MainContent>
         <Header>
           <PageTitle>{title}</PageTitle>
@@ -283,7 +316,7 @@ function Layout({ children, title }) {
             {/* 필요한 경우 여기에 액션 버튼 추가 */}
           </ActionButtons>
         </Header>
-        
+
         {children}
       </MainContent>
     </LayoutContainer>

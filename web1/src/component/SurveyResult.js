@@ -11,7 +11,6 @@ import {
   Link,
 } from "@mui/material";
 import {
-  Phone,
   Download,
   LocalHospital,
   Psychology,
@@ -38,6 +37,15 @@ const maxScores = {
   psychologicalBurden: 40,
   socialBurden: 15,
   resilience: 25,
+};
+
+// 2줄 클램프 공통 스타일
+const clamp2 = {
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 };
 
 // 영역별 맞춤 지원 정보
@@ -162,37 +170,9 @@ const SurveyResult = ({
   overallFeedback = "",
   overallRiskGroup = "",
   answers = {},
-  riskByMean = {},
 }) => {
-  // 1) 데이터 전처리 - 실제 응답이 있는 섹션만 포함
-  const processed = Object.keys(rawScores)
-    .filter(
-      (key) => typeof meanScores[key] === "number" && !isNaN(meanScores[key])
-    )
-    .map((key) => {
-      const value = rawScores[key] ?? 0;
-      const mean = meanScores[key];
-      const included = key !== "lifestyle";
-      const sectionName = labelMap[key];
-      const stdScore =
-        included && typeof stdScores[key] === "number" && !isNaN(stdScores[key])
-          ? stdScores[key]
-          : 0;
-      return {
-        key,
-        label: sectionName,
-        value,
-        mean,
-        max: maxScores[key],
-        stdScore: stdScore,
-        level: included
-          ? SurveyUtils.getRiskGroup(sectionName, mean)
-          : "저위험집단",
-        included,
-      };
-    });
-
-  // 미응답(제외)된 섹션 안내 메시지 생성
+  // 1) 데이터 전처리 - 모든 섹션 포함 (응답하지 않은 섹션도 포함)
+  // allSectionKeys를 기준으로 모든 섹션을 표시하도록 수정
   const allSectionKeys = [
     "physicalChange",
     "healthManagement",
@@ -201,24 +181,68 @@ const SurveyResult = ({
     "socialBurden",
     "resilience",
   ];
-  const answeredKeys = processed.map((p) => p.key);
+
+  const processed = allSectionKeys.map((key) => {
+    const value = rawScores[key] ?? 0;
+    const mean = meanScores[key];
+    const included = key !== "lifestyle";
+    const sectionName = labelMap[key];
+    // stdScores가 숫자이고 유효한 경우만 사용, 아니면 null
+    const stdScoreValue = stdScores[key];
+    const stdScore =
+      included &&
+      typeof stdScoreValue === "number" &&
+      !isNaN(stdScoreValue) &&
+      stdScoreValue !== null
+        ? stdScoreValue
+        : null;
+
+    // mean이 숫자인지 확인 (응답 여부 판단)
+    const hasResponse =
+      typeof mean === "number" && !isNaN(mean) && mean !== null;
+
+    return {
+      key,
+      label: sectionName,
+      value,
+      mean: hasResponse ? mean : null,
+      max: maxScores[key],
+      stdScore: stdScore,
+      level:
+        included && hasResponse
+          ? SurveyUtils.getRiskGroup(sectionName, mean)
+          : "저위험집단",
+      included,
+      hasResponse, // 응답 여부 플래그
+    };
+  });
+
+  // 미응답(제외)된 섹션 안내 메시지 생성
+  const answeredKeys = processed.filter((p) => p.hasResponse).map((p) => p.key);
   const excludedSections = allSectionKeys.filter(
     (k) => !answeredKeys.includes(k)
   );
   const excludedLabels = excludedSections.map((k) => labelMap[k]);
 
-  // 전체 점수 계산
+  // 전체 점수 계산 (유효한 stdScore만 포함)
+  const validProcessed = processed.filter(
+    (p) =>
+      p.included &&
+      p.stdScore !== null &&
+      typeof p.stdScore === "number" &&
+      !isNaN(p.stdScore)
+  );
   const totalScore =
-    processed
-      .filter((p) => p.included)
-      .reduce((sum, p) => sum + p.stdScore, 0) /
-    processed.filter((p) => p.included).length;
+    validProcessed.length > 0
+      ? validProcessed.reduce((sum, p) => sum + p.stdScore, 0) /
+        validProcessed.length
+      : 0;
 
   // 추가 피드백
   const additionalComments = SurveyUtils.getAdditionalFeedback(
     answers,
     meanScores,
-    riskByMean
+    riskGroups || {}
   );
 
   // 고위험 집단인 영역만 지원 서비스 표시
@@ -234,6 +258,47 @@ const SurveyResult = ({
   const HorizontalBarChart = ({ data }) => (
     <Box sx={{ width: "100%" }}>
       {data.map((item, index) => {
+        // 응답이 없는 섹션은 "응답 없음"으로 표시
+        if (!item.hasResponse) {
+          return (
+            <Box key={index} sx={{ mb: 3 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  {item.label}
+                </Typography>
+                <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                  응답 없음
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  height: 20,
+                  bgcolor: "#f5f5f5",
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  border: "1px dashed #ccc",
+                }}
+              />
+            </Box>
+          );
+        }
+
+        // stdScore가 null이거나 유효하지 않으면 표시하지 않음
+        if (
+          item.stdScore === null ||
+          item.stdScore === undefined ||
+          typeof item.stdScore !== "number" ||
+          isNaN(item.stdScore)
+        ) {
+          return null;
+        }
         const score = Math.round(item.stdScore);
         const percentage = Math.min(Math.max(score, 0), 100);
 
@@ -455,13 +520,15 @@ const SurveyResult = ({
                 {Math.round(totalScore)}점
               </Typography>
               <Chip
-                label={overallRiskGroup}
+                label={overallRiskGroup || "정보 없음"}
                 color={
                   overallRiskGroup === "저위험집단"
                     ? "success"
                     : overallRiskGroup === "주의집단"
                     ? "warning"
-                    : "error"
+                    : overallRiskGroup === "고위험집단"
+                    ? "error"
+                    : "default"
                 }
                 sx={{ fontWeight: "bold" }}
               />
@@ -501,7 +568,7 @@ const SurveyResult = ({
                 variant="subtitle2"
                 sx={{ mb: 0.5, fontWeight: "bold" }}
               >
-                {overallRiskGroup}
+                {overallRiskGroup || "정보 없음"}
               </Typography>
               <Typography
                 variant="body2"
@@ -509,11 +576,7 @@ const SurveyResult = ({
                 sx={{
                   maxWidth: 520,
                   px: { xs: 0.5, sm: 1 },
-                  display: "-webkit-box",
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
+                  ...clamp2,
                 }}
               >
                 {overallFeedback}
@@ -553,6 +616,7 @@ const SurveyResult = ({
                             ? "success.main"
                             : "text.primary",
                         fontWeight: "bold",
+                        ...clamp2,
                       }}
                     >
                       {text}
@@ -638,6 +702,7 @@ const SurveyResult = ({
                                     fontWeight: "bold",
                                     fontSize: "0.85rem",
                                     gap: 0.5,
+                                    ...clamp2,
                                   }}
                                 >
                                   {contact.name}
@@ -654,6 +719,7 @@ const SurveyResult = ({
                                   sx={{
                                     fontWeight: "bold",
                                     fontSize: "0.85rem",
+                                    ...clamp2,
                                   }}
                                 >
                                   {contact.name}

@@ -1,14 +1,13 @@
 // src/contexts/AuthContext.js
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import { 
-  onAuthStateChanged, 
+import React, { createContext, useState, useEffect, useContext } from "react";
+import {
+  onAuthStateChanged,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   signOut as firebaseSignOut,
-  updateProfile
-} from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+} from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { auth, db } from "../firebase";
 
 // 인증 컨텍스트 생성
 const AuthContext = createContext();
@@ -52,7 +51,7 @@ export function AuthProvider({ children }) {
     try {
       const docRef = doc(db, "socialWorkers", uid);
       const docSnap = await getDoc(docRef);
-      
+
       if (docSnap.exists()) {
         const data = docSnap.data();
         setSocialWorkerData(data);
@@ -70,13 +69,17 @@ export function AuthProvider({ children }) {
   // 사회복지사 정보 업데이트
   async function updateSocialWorkerData(uid, data) {
     try {
-      await setDoc(doc(db, "socialWorkers", uid), {
-        ...data,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-      
+      await setDoc(
+        doc(db, "socialWorkers", uid),
+        {
+          ...data,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+
       // 로컬 상태 업데이트
-      setSocialWorkerData(prevData => ({...prevData, ...data}));
+      setSocialWorkerData((prevData) => ({ ...prevData, ...data }));
     } catch (error) {
       console.error("사회복지사 정보 업데이트 오류:", error);
       throw error;
@@ -111,7 +114,7 @@ export function AuthProvider({ children }) {
     resetPassword,
     signOut,
     fetchSocialWorkerData,
-    updateSocialWorkerData
+    updateSocialWorkerData,
   };
 
   return (

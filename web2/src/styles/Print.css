@@ -1,0 +1,60 @@
+/* web2/src/styles/print.css */
+
+/* 페이지 공통 여백/컨테이너 */
+.page-container {
+  padding: 16px;
+}
+
+/* 상단 툴바 */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.toolbar-actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.table-wrap {
+  overflow: auto;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.patients-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.patients-table th,
+.patients-table td {
+  border: 1px solid #e5e5e5;
+  padding: 8px 10px;
+  text-align: left;
+}
+.patients-table thead th {
+  background: #f7f7f7;
+  position: sticky;
+  top: 0;
+}
+
+/* 인쇄 전용 */
+@media print {
+  .no-print { display: none !important; }
+  .print-safe {
+    padding: 0;
+  }
+  .patients-table th,
+  .patients-table td {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  /* 페이지 나눔이 길게 이어지도록 */
+  .patients-table { page-break-inside: auto; }
+  .patients-table tr { page-break-inside: avoid; page-break-after: auto; }
+}

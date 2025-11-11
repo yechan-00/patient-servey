@@ -1,15 +1,22 @@
 // src/pages/CounselingRecordPage.js
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
-import Layout from '../components/Layout';
-import { 
-  doc, getDoc, updateDoc, collection, 
-  addDoc, getDocs, query, orderBy, 
-  serverTimestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import styled from "styled-components";
+import Layout from "../components/Layout";
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  serverTimestamp,
+} from "firebase/firestore";
+import { db } from "../firebase";
+import StatusSelect from "../components/StatusSelect";
+import { useAuth } from "../contexts/AuthContext";
 
 // 컨테이너
 const Container = styled.div`
@@ -24,7 +31,7 @@ const BackLink = styled(Link)`
   color: #6c757d;
   text-decoration: none;
   margin-bottom: 1rem;
-  
+
   &:hover {
     color: #495057;
   }
@@ -35,7 +42,7 @@ const TwoColumnGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
-  
+
   @media (max-width: 992px) {
     grid-template-columns: 1fr;
   }
@@ -101,11 +108,11 @@ const Badge = styled.span`
   border-radius: 50px;
   font-size: 0.75rem;
   font-weight: 700;
-  background-color: ${props => {
-    if (props.status === 'pending') return '#ffc107';
-    if (props.status === 'accepted') return '#28a745';
-    if (props.status === 'completed') return '#6c757d';
-    return '#dc3545';
+  background-color: ${(props) => {
+    if (props.status === "pending") return "#ffc107";
+    if (props.status === "accepted") return "#28a745";
+    if (props.status === "completed") return "#6c757d";
+    return "#dc3545";
   }};
   color: white;
 `;
@@ -136,7 +143,7 @@ const RequestContent = styled.div`
 
 // 버튼
 const Button = styled.button`
-  background-color: ${props => props.secondary ? '#6c757d' : '#2a5e8c'};
+  background-color: ${(props) => (props.secondary ? "#6c757d" : "#2a5e8c")};
   color: white;
   border: none;
   border-radius: 4px;
@@ -144,22 +151,15 @@ const Button = styled.button`
   font-size: 0.9rem;
   cursor: pointer;
   transition: background-color 0.3s;
-  
+
   &:hover {
-    background-color: ${props => props.secondary ? '#5a6268' : '#1d4269'};
+    background-color: ${(props) => (props.secondary ? "#5a6268" : "#1d4269")};
   }
-  
+
   &:disabled {
     background-color: #cccccc;
     cursor: not-allowed;
   }
-`;
-
-// 버튼 그룹
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
 `;
 
 // 텍스트 영역
@@ -211,7 +211,7 @@ const NotesList = styled.div`
 const NoteItem = styled.div`
   padding: 1rem;
   border-bottom: 1px solid #dee2e6;
-  
+
   &:last-child {
     border-bottom: none;
   }
@@ -259,15 +259,15 @@ const Step = styled.div`
   flex: 1;
   text-align: center;
   position: relative;
-  
+
   &:not(:last-child)::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 2rem;
     right: 0;
     width: 100%;
     height: 2px;
-    background-color: ${props => props.active ? '#2a5e8c' : '#e9ecef'};
+    background-color: ${(props) => (props.active ? "#2a5e8c" : "#e9ecef")};
     z-index: 1;
   }
 `;
@@ -277,8 +277,8 @@ const StepIcon = styled.div`
   width: 4rem;
   height: 4rem;
   border-radius: 50%;
-  background-color: ${props => props.active ? '#2a5e8c' : '#e9ecef'};
-  color: ${props => props.active ? 'white' : '#6c757d'};
+  background-color: ${(props) => (props.active ? "#2a5e8c" : "#e9ecef")};
+  color: ${(props) => (props.active ? "white" : "#6c757d")};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -291,119 +291,123 @@ const StepIcon = styled.div`
 // 스텝 라벨
 const StepLabel = styled.div`
   font-size: 0.9rem;
-  color: ${props => props.active ? '#343a40' : '#6c757d'};
-  font-weight: ${props => props.active ? '500' : '400'};
+  color: ${(props) => (props.active ? "#343a40" : "#6c757d")};
+  font-weight: ${(props) => (props.active ? "500" : "400")};
 `;
 
 // 상태를 한글로 변환
 const getStatusText = (status) => {
   const statuses = {
-    'pending': '대기 중',
-    'accepted': '예약 확정',
-    'completed': '완료',
-    'cancelled': '취소됨'
+    pending: "대기 중",
+    accepted: "예약 확정",
+    completed: "완료",
+    cancelled: "취소됨",
   };
-  return statuses[status] || '알 수 없음';
+  return statuses[status] || "알 수 없음";
 };
 
 // 연락 방법을 한글로 변환
 const getContactMethodText = (method) => {
   const methods = {
-    'phone': '전화',
-    'sms': '문자메시지',
-    'kakaotalk': '카카오톡',
-    'email': '이메일'
+    phone: "전화",
+    sms: "문자메시지",
+    kakaotalk: "카카오톡",
+    email: "이메일",
   };
-  return methods[method] || '알 수 없음';
+  return methods[method] || "알 수 없음";
 };
 
 // 연락 가능 시간을 한글로 변환
 const getContactTimeText = (time) => {
   const times = {
-    'anytime': '언제든지 가능',
-    'morning': '오전 (9시-12시)',
-    'afternoon': '오후 (12시-18시)',
-    'evening': '저녁 (18시-21시)'
+    anytime: "언제든지 가능",
+    morning: "오전 (9시-12시)",
+    afternoon: "오후 (12시-18시)",
+    evening: "저녁 (18시-21시)",
   };
-  return times[time] || '알 수 없음';
+  return times[time] || "알 수 없음";
 };
 
 function CounselingRecordPage() {
   const { requestId } = useParams();
   const navigate = useNavigate();
   const { currentUser, socialWorkerData } = useAuth();
-  
+
   const [request, setRequest] = useState(null);
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notes, setNotes] = useState([]);
-  const [newNote, setNewNote] = useState('');
-  const [appointmentDate, setAppointmentDate] = useState('');
-  const [appointmentTime, setAppointmentTime] = useState('');
-  const [validationError, setValidationError] = useState('');
-  
+  const [newNote, setNewNote] = useState("");
+  const [appointmentDate, setAppointmentDate] = useState("");
+  const [appointmentTime, setAppointmentTime] = useState("");
+  const [validationError, setValidationError] = useState("");
+
   // 상담 요청 및 관련 데이터 불러오기
   useEffect(() => {
     const fetchData = async () => {
       try {
         // 상담 요청 불러오기
-        const requestDoc = await getDoc(doc(db, "counselingRequests", requestId));
-        
+        const requestDoc = await getDoc(
+          doc(db, "counselingRequests", requestId)
+        );
+
         if (!requestDoc.exists()) {
           setError("상담 요청을 찾을 수 없습니다.");
           setLoading(false);
           return;
         }
-        
+
         const requestData = {
           id: requestDoc.id,
           ...requestDoc.data(),
-          createdAt: requestDoc.data().createdAt?.toDate() || new Date()
+          createdAt: requestDoc.data().createdAt?.toDate() || new Date(),
         };
-        
+
         setRequest(requestData);
-        
+
         // 환자 정보 불러오기
         if (requestData.userId) {
-          const patientDoc = await getDoc(doc(db, "patients", requestData.userId));
-          
+          const patientDoc = await getDoc(
+            doc(db, "patients", requestData.userId)
+          );
+
           if (patientDoc.exists()) {
             setPatient({
               id: patientDoc.id,
-              ...patientDoc.data()
+              ...patientDoc.data(),
             });
           }
         }
-        
+
         // 상담 노트 불러오기
         const notesQuery = query(
           collection(db, "counselingRequests", requestId, "notes"),
           orderBy("createdAt", "desc")
         );
-        
+
         const notesSnapshot = await getDocs(notesQuery);
         const notesData = [];
-        
-        notesSnapshot.forEach(doc => {
+
+        notesSnapshot.forEach((doc) => {
           notesData.push({
             id: doc.id,
             ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate() || new Date()
+            createdAt: doc.data().createdAt?.toDate() || new Date(),
           });
         });
-        
+
         setNotes(notesData);
-        
+
         // 이미 예약된 일정 정보 설정
         if (requestData.appointmentDate) {
           setAppointmentDate(requestData.appointmentDate);
         }
-        
+
         if (requestData.appointmentTime) {
           setAppointmentTime(requestData.appointmentTime);
         }
-        
+
         setLoading(false);
       } catch (error) {
         console.error("데이터 불러오기 오류:", error);
@@ -411,112 +415,117 @@ function CounselingRecordPage() {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, [requestId]);
-  
+
   // 상담 요청 상태 업데이트
   const handleStatusUpdate = async (status) => {
     try {
       const updates = {
         status,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       };
-      
+
       // 상태가 accepted인 경우 상담 일정 정보 추가
-      if (status === 'accepted') {
+      if (status === "accepted") {
         if (!appointmentDate || !appointmentTime) {
           setValidationError("상담 일정을 입력해 주세요.");
           return;
         }
-        
+
         updates.appointmentDate = appointmentDate;
         updates.appointmentTime = appointmentTime;
       }
-      
+
       await updateDoc(doc(db, "counselingRequests", requestId), updates);
-      
+
       // 로컬 상태 업데이트
-      setRequest(prev => ({
+      setRequest((prev) => ({
         ...prev,
         ...updates,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       }));
-      
-      setValidationError('');
+
+      setValidationError("");
     } catch (error) {
       console.error("상태 업데이트 오류:", error);
       setError("상태 업데이트 중 오류가 발생했습니다.");
     }
   };
-  
+
   // 상담 노트 추가
   const handleAddNote = async (e) => {
     e.preventDefault();
-    
+
     if (!newNote.trim()) {
       setValidationError("노트 내용을 입력해 주세요.");
       return;
     }
-    
+
     try {
       const noteData = {
         content: newNote,
         authorId: currentUser.uid,
         authorName: socialWorkerData?.name || "사회복지사",
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       };
-      
+
       const noteRef = await addDoc(
         collection(db, "counselingRequests", requestId, "notes"),
         noteData
       );
-      
+
       const newNoteWithId = {
         id: noteRef.id,
         ...noteData,
-        createdAt: new Date()
+        createdAt: new Date(),
       };
-      
-      setNotes(prev => [newNoteWithId, ...prev]);
-      setNewNote('');
-      setValidationError('');
+
+      setNotes((prev) => [newNoteWithId, ...prev]);
+      setNewNote("");
+      setValidationError("");
     } catch (error) {
       console.error("노트 추가 오류:", error);
       setValidationError("노트 추가 중 오류가 발생했습니다.");
     }
   };
-  
+
   // 환자 상세 페이지로 이동
   const goToPatientDetail = () => {
     if (patient?.id) {
       navigate(`/patients/${patient.id}`);
     }
   };
-  
+
   // 환자 이니셜 가져오기
   const getPatientInitials = () => {
-    if (!request?.name) return '?';
-    
-    const nameParts = request.name.split(' ');
+    if (!request?.name) return "?";
+
+    const nameParts = request.name.split(" ");
     if (nameParts.length > 1) {
       return `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase();
     }
-    
+
     return request.name[0].toUpperCase();
   };
-  
+
   // 현재 상태에 따른 스텝 인덱스 가져오기
   const getActiveStepIndex = () => {
     switch (request?.status) {
-      case 'pending': return 0;
-      case 'accepted': return 1;
-      case 'completed': return 2;
-      case 'cancelled': return 3;
-      default: return 0;
+      case "pending":
+        return 0;
+      case "accepted":
+        return 1;
+      case "completed":
+        return 2;
+      case "cancelled":
+        return 3;
+      default:
+        return 0;
     }
   };
-  
+
   if (loading) {
     return (
       <Layout title="상담 기록">
@@ -526,7 +535,7 @@ function CounselingRecordPage() {
       </Layout>
     );
   }
-  
+
   if (error) {
     return (
       <Layout title="상담 기록">
@@ -539,7 +548,7 @@ function CounselingRecordPage() {
       </Layout>
     );
   }
-  
+
   if (!request) {
     return (
       <Layout title="상담 기록">
@@ -552,20 +561,20 @@ function CounselingRecordPage() {
       </Layout>
     );
   }
-  
+
   const activeStepIndex = getActiveStepIndex();
-  
+
   return (
     <Layout title="상담 기록">
       <Container>
         <BackLink to="/counseling-requests">← 상담 요청 목록으로</BackLink>
-        
+
         <Card>
           <RequestHeader>
             <PatientInfo>
               <PatientAvatar>{getPatientInitials()}</PatientAvatar>
               <div>
-                <PatientName>{request.name || '익명'}</PatientName>
+                <PatientName>{request.name || "익명"}</PatientName>
                 <p>요청일: {request.createdAt.toLocaleDateString()}</p>
               </div>
             </PatientInfo>
@@ -573,7 +582,7 @@ function CounselingRecordPage() {
               {getStatusText(request.status)}
             </Badge>
           </RequestHeader>
-          
+
           <StatusSteps>
             <Step active={activeStepIndex >= 0}>
               <StepIcon active={activeStepIndex >= 0}>1</StepIcon>
@@ -588,55 +597,61 @@ function CounselingRecordPage() {
               <StepLabel active={activeStepIndex >= 2}>상담 완료</StepLabel>
             </Step>
           </StatusSteps>
-          
+
           <TwoColumnGrid>
             <div>
               <CardTitle>요청 정보</CardTitle>
-              
+
               <InfoGroup>
                 <InfoLabel>연락처</InfoLabel>
-                <InfoValue>{request.phone || '정보 없음'}</InfoValue>
+                <InfoValue>{request.phone || "정보 없음"}</InfoValue>
               </InfoGroup>
-              
+
               <InfoGroup>
                 <InfoLabel>연락 방법</InfoLabel>
-                <InfoValue>{getContactMethodText(request.contactMethod)}</InfoValue>
+                <InfoValue>
+                  {getContactMethodText(request.contactMethod)}
+                </InfoValue>
               </InfoGroup>
-              
+
               <InfoGroup>
                 <InfoLabel>연락 가능 시간</InfoLabel>
                 <InfoValue>{getContactTimeText(request.contactTime)}</InfoValue>
               </InfoGroup>
-              
+
               <InfoGroup>
                 <InfoLabel>희망 상담 날짜</InfoLabel>
-                <InfoValue>{request.preferredDate || '정보 없음'}</InfoValue>
+                <InfoValue>{request.preferredDate || "정보 없음"}</InfoValue>
               </InfoGroup>
-              
+
               <InfoGroup>
                 <InfoLabel>희망 상담 시간</InfoLabel>
-                <InfoValue>{request.preferredTime || '정보 없음'}</InfoValue>
+                <InfoValue>{request.preferredTime || "정보 없음"}</InfoValue>
               </InfoGroup>
-              
-              {request.status === 'accepted' && (
+
+              {request.status === "accepted" && (
                 <>
                   <CardTitle>예약된 상담</CardTitle>
                   <InfoGroup>
                     <InfoLabel>상담 날짜</InfoLabel>
-                    <InfoValue>{request.appointmentDate || '정보 없음'}</InfoValue>
+                    <InfoValue>
+                      {request.appointmentDate || "정보 없음"}
+                    </InfoValue>
                   </InfoGroup>
                   <InfoGroup>
                     <InfoLabel>상담 시간</InfoLabel>
-                    <InfoValue>{request.appointmentTime || '정보 없음'}</InfoValue>
+                    <InfoValue>
+                      {request.appointmentTime || "정보 없음"}
+                    </InfoValue>
                   </InfoGroup>
                 </>
               )}
-              
+
               <CardTitle>상담 희망 사항</CardTitle>
               <RequestContent>
-                {request.concerns || '상담 희망 사항이 없습니다.'}
+                {request.concerns || "상담 희망 사항이 없습니다."}
               </RequestContent>
-              
+
               <RequestContent>
                 {request.additionalInfo && (
                   <>
@@ -645,19 +660,17 @@ function CounselingRecordPage() {
                   </>
                 )}
               </RequestContent>
-              
+
               {patient && (
-                <Button onClick={goToPatientDetail}>
-                  환자 상세 정보 보기
-                </Button>
+                <Button onClick={goToPatientDetail}>환자 상세 정보 보기</Button>
               )}
             </div>
-            
+
             <div>
-              {request.status === 'pending' && (
+              {request.status === "pending" && (
                 <Card>
                   <CardTitle>상담 일정 등록</CardTitle>
-                  
+
                   <FormGroup>
                     <Label htmlFor="appointmentDate">상담 날짜</Label>
                     <Input
@@ -665,10 +678,10 @@ function CounselingRecordPage() {
                       id="appointmentDate"
                       value={appointmentDate}
                       onChange={(e) => setAppointmentDate(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
+                      min={new Date().toISOString().split("T")[0]}
                     />
                   </FormGroup>
-                  
+
                   <FormGroup>
                     <Label htmlFor="appointmentTime">상담 시간</Label>
                     <Input
@@ -678,56 +691,58 @@ function CounselingRecordPage() {
                       onChange={(e) => setAppointmentTime(e.target.value)}
                     />
                   </FormGroup>
-                  
+
                   {validationError && (
                     <ErrorMessage>{validationError}</ErrorMessage>
                   )}
-                  
-                  <ButtonGroup>
-                    <Button onClick={() => handleStatusUpdate('accepted')}>
-                      상담 확정
-                    </Button>
-                    <Button 
-                      secondary 
-                      onClick={() => handleStatusUpdate('cancelled')}
-                    >
-                      요청 거절
-                    </Button>
-                  </ButtonGroup>
+
+                  <FormGroup>
+                    <Label htmlFor="status">상담 상태</Label>
+                    <StatusSelect
+                      value={request.status}
+                      onChange={(next) => handleStatusUpdate(next)}
+                      fullWidth
+                      label="상담 상태"
+                    />
+                  </FormGroup>
                 </Card>
               )}
-              
-              {request.status === 'accepted' && (
+
+              {request.status === "accepted" && (
                 <Card>
                   <CardTitle>상담 진행</CardTitle>
-                  <Button onClick={() => handleStatusUpdate('completed')}>
-                    상담 완료 처리
-                  </Button>
+                  <FormGroup>
+                    <Label htmlFor="status">상담 상태</Label>
+                    <StatusSelect
+                      value={request.status}
+                      onChange={(next) => handleStatusUpdate(next)}
+                      fullWidth
+                      label="상담 상태"
+                    />
+                  </FormGroup>
                 </Card>
               )}
-              
+
               <Card>
                 <CardTitle>상담 노트</CardTitle>
-                
+
                 <form onSubmit={handleAddNote}>
                   <TextArea
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     placeholder="상담 내용, 후속 조치 등을 기록하세요..."
                   />
-                  
-                  <Button type="submit">
-                    노트 저장
-                  </Button>
+
+                  <Button type="submit">노트 저장</Button>
                 </form>
-                
+
                 {notes.length === 0 ? (
                   <EmptyState>
                     <p>등록된 상담 노트가 없습니다.</p>
                   </EmptyState>
                 ) : (
                   <NotesList>
-                    {notes.map(note => (
+                    {notes.map((note) => (
                       <NoteItem key={note.id}>
                         <NoteHeader>
                           <NoteAuthor>{note.authorName}</NoteAuthor>

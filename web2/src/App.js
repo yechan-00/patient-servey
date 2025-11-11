@@ -1,50 +1,43 @@
 // src/App.js
 import React from "react";
 import {
-  BrowserRouter as Router,
+  HashRouter as Router,
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
-import { ThemeProvider } from "styled-components";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { ThemeProvider } from "styled-components";
 import GlobalStyle from "./styles/GlobalStyle";
 import theme from "./styles/theme";
 
-// 페이지 컴포넌트 임포트
+// 페이지 컴포넌트
+import DashboardPage from "./pages/DashboardPage";
+import PatientDetailPage from "./pages/patient-detail/PatientDetailPage";
+import CounselingRecordPage from "./pages/CounselingRecordPage";
+import ArchivedPatientsPage from "./pages/ArchivedPatientsPage";
 import LoginPage from "./pages/LoginPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import DashboardPage from "./pages/DashboardPage";
-import PatientDetailPage from "./pages/PatientDetailPage";
-import CounselingRecordPage from "./pages/CounselingRecordPage";
 import ProfilePage from "./pages/ProfilePage";
+import PatientsListPage from "./pages/PatientsListPage";
 
-// 인증 필요한 라우트를 위한 컴포넌트
 function PrivateRoute({ children }) {
   const { currentUser } = useAuth();
-
-  // 로그인 상태만 확인 (승인 확인 제거)
-  if (!currentUser) {
-    return <Navigate to="/login" />;
-  }
-
-  return children;
+  return currentUser ? children : <Navigate to="/login" />;
 }
 
-// src/App.js
-// ...
-function App() {
+export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyle />
       <AuthProvider>
-        <Router basename="/patient-servey/web2">
+        <Router>
           <Routes>
-            {/* 공개 라우트 */}
+            {/* 공개 경로 */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-            {/* 인증 필요 라우트 */}
+            {/* 보호 경로 */}
             <Route
               path="/"
               element={
@@ -70,6 +63,22 @@ function App() {
               }
             />
             <Route
+              path="/patients/archived"
+              element={
+                <PrivateRoute>
+                  <ArchivedPatientsPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/archived"
+              element={
+                <PrivateRoute>
+                  <ArchivedPatientsPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
               path="/profile"
               element={
                 <PrivateRoute>
@@ -77,8 +86,16 @@ function App() {
                 </PrivateRoute>
               }
             />
+            <Route
+              path="/patients-lite"
+              element={
+                <PrivateRoute>
+                  <PatientsListPage />
+                </PrivateRoute>
+              }
+            />
 
-            {/* 없는 경로는 대시보드로 리디렉션 */}
+            {/* fallback */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Router>
@@ -86,5 +103,3 @@ function App() {
     </ThemeProvider>
   );
 }
-
-export default App;

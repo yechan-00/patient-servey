@@ -1,14 +1,13 @@
 // src/pages/ProfilePage.js
-import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import Layout from '../components/Layout';
-import { useAuth } from '../contexts/AuthContext';
-import { 
-  EmailAuthProvider, 
-  reauthenticateWithCredential, 
-  updatePassword 
-} from 'firebase/auth';
-import { auth } from '../firebase';
+import React, { useState, useEffect } from "react";
+import styled from "styled-components";
+import Layout from "../components/Layout";
+import { useAuth } from "../contexts/AuthContext";
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+} from "firebase/auth";
 
 // 컨테이너
 const Container = styled.div`
@@ -54,7 +53,7 @@ const Input = styled.input`
   border: 1px solid #ced4da;
   border-radius: 4px;
   transition: border-color 0.15s ease-in-out;
-  
+
   &:focus {
     border-color: #2a5e8c;
     outline: none;
@@ -71,11 +70,11 @@ const Button = styled.button`
   font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.15s ease-in-out;
-  
+
   &:hover {
     background-color: #1d4269;
   }
-  
+
   &:disabled {
     background-color: #6c757d;
     cursor: not-allowed;
@@ -96,144 +95,146 @@ const ErrorMessage = styled.p`
 
 function ProfilePage() {
   const { currentUser, socialWorkerData, updateSocialWorkerData } = useAuth();
-  
+
   const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    organization: '',
-    email: ''
+    name: "",
+    phone: "",
+    organization: "",
+    email: "",
   });
-  
+
   const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [passwordSuccess, setPasswordSuccess] = useState('');
-  
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+
   // 사용자 데이터 불러오기
   useEffect(() => {
     if (socialWorkerData) {
       setFormData({
-        name: socialWorkerData.name || '',
-        phone: socialWorkerData.phone || '',
-        organization: socialWorkerData.organization || '',
-        email: currentUser.email || ''
+        name: socialWorkerData.name || "",
+        phone: socialWorkerData.phone || "",
+        organization: socialWorkerData.organization || "",
+        email: currentUser.email || "",
       });
     }
   }, [socialWorkerData, currentUser]);
-  
+
   // 폼 입력 핸들러
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
-  
+
   // 비밀번호 폼 입력 핸들러
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
-    setPasswordForm(prev => ({
+    setPasswordForm((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
-  
+
   // 프로필 업데이트 제출 핸들러
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
-      setError('');
-      setSuccess('');
+      setError("");
+      setSuccess("");
       setLoading(true);
-      
+
       await updateSocialWorkerData(currentUser.uid, {
         name: formData.name,
         phone: formData.phone,
-        organization: formData.organization
+        organization: formData.organization,
       });
-      
-      setSuccess('프로필이 성공적으로 업데이트되었습니다.');
+
+      setSuccess("프로필이 성공적으로 업데이트되었습니다.");
     } catch (error) {
       console.error("프로필 업데이트 오류:", error);
-      setError('프로필 업데이트 중 오류가 발생했습니다.');
+      setError("프로필 업데이트 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
   };
-  
+
   // 비밀번호 변경 핸들러
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    
-    setPasswordError('');
-    setPasswordSuccess('');
+
+    setPasswordError("");
+    setPasswordSuccess("");
     setPasswordLoading(true);
-    
+
     // 비밀번호 검증
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       setPasswordLoading(false);
-      return setPasswordError('새 비밀번호가 일치하지 않습니다.');
+      return setPasswordError("새 비밀번호가 일치하지 않습니다.");
     }
-    
+
     if (passwordForm.newPassword.length < 6) {
       setPasswordLoading(false);
-      return setPasswordError('비밀번호는 최소 6자 이상이어야 합니다.');
+      return setPasswordError("비밀번호는 최소 6자 이상이어야 합니다.");
     }
-    
+
     try {
       // 현재 사용자의 인증 정보 생성
       const credential = EmailAuthProvider.credential(
         currentUser.email,
         passwordForm.currentPassword
       );
-      
+
       // 사용자 재인증
       await reauthenticateWithCredential(currentUser, credential);
-      
+
       // 비밀번호 업데이트
       await updatePassword(currentUser, passwordForm.newPassword);
-      
-      setPasswordSuccess('비밀번호가 성공적으로 변경되었습니다.');
-      
+
+      setPasswordSuccess("비밀번호가 성공적으로 변경되었습니다.");
+
       // 폼 초기화
       setPasswordForm({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
       });
     } catch (error) {
       console.error("비밀번호 변경 오류:", error);
-      
-      if (error.code === 'auth/wrong-password') {
-        setPasswordError('현재 비밀번호가 올바르지 않습니다.');
-      } else if (error.code === 'auth/too-many-requests') {
-        setPasswordError('너무 많은 요청이 있었습니다. 나중에 다시 시도해주세요.');
-      } else if (error.code === 'auth/requires-recent-login') {
-        setPasswordError('보안을 위해 다시 로그인 후 시도해주세요.');
+
+      if (error.code === "auth/wrong-password") {
+        setPasswordError("현재 비밀번호가 올바르지 않습니다.");
+      } else if (error.code === "auth/too-many-requests") {
+        setPasswordError(
+          "너무 많은 요청이 있었습니다. 나중에 다시 시도해주세요."
+        );
+      } else if (error.code === "auth/requires-recent-login") {
+        setPasswordError("보안을 위해 다시 로그인 후 시도해주세요.");
       } else {
-        setPasswordError('비밀번호 변경 중 오류가 발생했습니다.');
+        setPasswordError("비밀번호 변경 중 오류가 발생했습니다.");
       }
     } finally {
       setPasswordLoading(false);
     }
   };
-  
+
   return (
     <Layout title="내 프로필">
       <Container>
         <ProfileCard>
           <SectionTitle>프로필 정보</SectionTitle>
-          
+
           <form onSubmit={handleSubmit}>
             <FormGroup>
               <Label htmlFor="name">이름</Label>
@@ -245,7 +246,7 @@ function ProfilePage() {
                 onChange={handleChange}
               />
             </FormGroup>
-            
+
             <FormGroup>
               <Label htmlFor="email">이메일</Label>
               <Input
@@ -257,7 +258,7 @@ function ProfilePage() {
               />
               <small>이메일은 변경할 수 없습니다.</small>
             </FormGroup>
-            
+
             <FormGroup>
               <Label htmlFor="phone">연락처</Label>
               <Input
@@ -268,7 +269,7 @@ function ProfilePage() {
                 onChange={handleChange}
               />
             </FormGroup>
-            
+
             <FormGroup>
               <Label htmlFor="organization">소속 기관</Label>
               <Input
@@ -279,19 +280,19 @@ function ProfilePage() {
                 onChange={handleChange}
               />
             </FormGroup>
-            
+
             {error && <ErrorMessage>{error}</ErrorMessage>}
             {success && <SuccessMessage>{success}</SuccessMessage>}
-            
+
             <Button type="submit" disabled={loading}>
-              {loading ? '업데이트 중...' : '프로필 업데이트'}
+              {loading ? "업데이트 중..." : "프로필 업데이트"}
             </Button>
           </form>
         </ProfileCard>
-        
+
         <ProfileCard>
           <SectionTitle>비밀번호 변경</SectionTitle>
-          
+
           <form onSubmit={handlePasswordSubmit}>
             <FormGroup>
               <Label htmlFor="currentPassword">현재 비밀번호</Label>
@@ -303,7 +304,7 @@ function ProfilePage() {
                 onChange={handlePasswordChange}
               />
             </FormGroup>
-            
+
             <FormGroup>
               <Label htmlFor="newPassword">새 비밀번호</Label>
               <Input
@@ -314,7 +315,7 @@ function ProfilePage() {
                 onChange={handlePasswordChange}
               />
             </FormGroup>
-            
+
             <FormGroup>
               <Label htmlFor="confirmPassword">새 비밀번호 확인</Label>
               <Input
@@ -325,12 +326,14 @@ function ProfilePage() {
                 onChange={handlePasswordChange}
               />
             </FormGroup>
-            
+
             {passwordError && <ErrorMessage>{passwordError}</ErrorMessage>}
-            {passwordSuccess && <SuccessMessage>{passwordSuccess}</SuccessMessage>}
-            
+            {passwordSuccess && (
+              <SuccessMessage>{passwordSuccess}</SuccessMessage>
+            )}
+
             <Button type="submit" disabled={passwordLoading}>
-              {passwordLoading ? '변경 중...' : '비밀번호 변경'}
+              {passwordLoading ? "변경 중..." : "비밀번호 변경"}
             </Button>
           </form>
         </ProfileCard>
