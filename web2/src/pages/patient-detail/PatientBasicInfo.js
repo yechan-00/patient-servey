@@ -703,13 +703,31 @@ export function buildViewModel({
 
   const alcoholDisplay = (() => {
     const choice = safeText(alcoholChoiceRaw);
-    if (!choice || choice === "정보 없음") return "정보 없음";
-    if (choice === "해당없음") return "해당없음";
 
-    const ynText = yn(choice) ?? choice;
-    const lines = [ynText];
+    // 상세 정보가 있는지 확인
+    const hasDetails =
+      (alcoholSoju && String(alcoholSoju).trim() !== "") ||
+      (alcoholBeer && String(alcoholBeer).trim() !== "") ||
+      (alcoholOther && String(alcoholOther).trim() !== "") ||
+      alcoholBarriers.length > 0;
 
-    // 현재 음주량 표시
+    // 상세 정보가 없고 선택값도 없으면 정보 없음
+    if ((!choice || choice === "정보 없음") && !hasDetails) {
+      return "정보 없음";
+    }
+    if (choice === "해당없음" && !hasDetails) {
+      return "해당없음";
+    }
+
+    const lines = [];
+
+    // 예/아니오 표시
+    if (choice && choice !== "정보 없음" && choice !== "해당없음") {
+      const ynText = yn(choice) ?? choice;
+      lines.push(ynText);
+    }
+
+    // 현재 음주량 표시 (상세 정보가 있으면 항상 표시)
     const currentParts = [];
     if (alcoholSoju && String(alcoholSoju).trim() !== "")
       currentParts.push(`소주: ${alcoholSoju}`);
@@ -738,7 +756,7 @@ export function buildViewModel({
       lines.push(`실패 이유: ${barrierLabels.join(", ")}`);
     }
 
-    return lines.join("\n");
+    return lines.length > 0 ? lines.join("\n") : "정보 없음";
   })();
 
   // 금연 관련 데이터 수집 (더 많은 소스 확인)
@@ -802,16 +820,34 @@ export function buildViewModel({
 
   const smokingDisplay = (() => {
     const choice = safeText(smokingChoiceRaw);
-    if (!choice || choice === "정보 없음") return "정보 없음";
-    if (choice === "해당없음") return "해당없음";
 
-    const ynText = yn(choice) ?? choice;
-    const lines = [ynText];
+    // 상세 정보가 있는지 확인
+    const hasDetails =
+      (smokingRegular && String(smokingRegular).trim() !== "") ||
+      (smokingElectronic && String(smokingElectronic).trim() !== "") ||
+      (smokingOther && String(smokingOther).trim() !== "") ||
+      smokingBarriers.length > 0;
 
-    // 현재 흡연량 표시
+    // 상세 정보가 없고 선택값도 없으면 정보 없음
+    if ((!choice || choice === "정보 없음") && !hasDetails) {
+      return "정보 없음";
+    }
+    if (choice === "해당없음" && !hasDetails) {
+      return "해당없음";
+    }
+
+    const lines = [];
+
+    // 예/아니오 표시
+    if (choice && choice !== "정보 없음" && choice !== "해당없음") {
+      const ynText = yn(choice) ?? choice;
+      lines.push(ynText);
+    }
+
+    // 현재 흡연량 표시 (상세 정보가 있으면 항상 표시)
     const currentParts = [];
     if (smokingRegular && String(smokingRegular).trim() !== "")
-      currentParts.push(`일반담배: ${smokingRegular}`);
+      currentParts.push(`연초: ${smokingRegular}`);
     if (smokingElectronic && String(smokingElectronic).trim() !== "")
       currentParts.push(`전자담배: ${smokingElectronic}`);
     if (smokingOther && String(smokingOther).trim() !== "")
@@ -837,7 +873,7 @@ export function buildViewModel({
       lines.push(`실패 이유: ${barrierLabels.join(", ")}`);
     }
 
-    return lines.join("\n");
+    return lines.length > 0 ? lines.join("\n") : "정보 없음";
   })();
 
   const rows = [

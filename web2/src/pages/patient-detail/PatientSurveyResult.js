@@ -334,6 +334,46 @@ export default function PatientSurveyResult({ answers: propAnswers }) {
       });
     }
 
+    // q13_1 (13-1번 질문 - 식이조절 세부 문항)
+    const q13_1_items = [
+      { key: "q13_1_1", label: "조미료 섭취를 줄인다." },
+      { key: "q13_1_2", label: "식품의 신선도를 중요시한다." },
+      { key: "q13_1_3", label: "채식 및 과일 위주의 식습관을 한다." },
+      { key: "q13_1_4", label: "육류 섭취를 조절한다." },
+      { key: "q13_1_5", label: "탄수화물 섭취를 조절한다." },
+      {
+        key: "q13_1_6",
+        label: "항암식품(예: 버섯, 도라지, 두유, 현미식 등)을 먹는다.",
+      },
+    ];
+
+    const likertLabels = {
+      1: "전혀 그렇지 않다",
+      2: "그렇지 않다",
+      3: "보통이다",
+      4: "그렇다",
+      5: "매우 그렇다",
+    };
+
+    const q13_1_answers = q13_1_items
+      .map((item) => {
+        const value = answers[item.key];
+        if (value && value !== "" && value !== undefined && value !== null) {
+          const label = likertLabels[String(value)] || value;
+          return `${item.label}: ${label}`;
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    if (q13_1_answers.length > 0) {
+      fields.push({
+        number: "13-1",
+        label: "식이조절 세부 문항",
+        value: q13_1_answers.join("\n"),
+      });
+    }
+
     // counselingAreasText (34번 질문 관련)
     if (
       answers.counselingAreasText &&

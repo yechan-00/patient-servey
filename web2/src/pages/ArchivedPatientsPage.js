@@ -4,6 +4,7 @@ import styled from "styled-components";
 import { subscribePatients, setPatientArchived } from "../utils/FirebaseUtils";
 import { deletePatientWithCascade } from "../utils/cascadeDelete";
 import { Link, useNavigate } from "react-router-dom";
+import Layout from "../components/Layout";
 
 const Section = styled.div`
   padding: ${({ theme }) => theme.spacing?.lg || "24px"};
@@ -433,151 +434,192 @@ export default function ArchivedPatientsPage() {
   };
 
   return (
-    <Section>
-      <StatGrid>
-        <StatCard>
-          <StatLabel>보관 환자 수</StatLabel>
-          <StatValue style={{ color: primaryBlue }}>{stats.total}</StatValue>
-        </StatCard>
-        <StatCard>
-          <StatLabel>고위험</StatLabel>
-          <StatValue style={{ color: dangerRed }}>{stats.high}</StatValue>
-        </StatCard>
-        <StatCard>
-          <StatLabel>최근 30일 보관</StatLabel>
-          <StatValue style={{ color: midBlue }}>{stats.recent30}</StatValue>
-        </StatCard>
-        <StatCard>
-          <StatLabel>복귀 가능</StatLabel>
-          <StatValue style={{ color: okGreen }}>{stats.restorable}</StatValue>
-        </StatCard>
-      </StatGrid>
-      <Card>
-        <CardHeader>
-          <CardTitle>보관 환자 목록</CardTitle>
-          <CardActions>
-            <FilterGroup>
-              <TextInput
-                type="text"
-                placeholder="이름/ID 검색"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                aria-label="보관 환자 검색"
-              />
-              <Select
-                value={riskFilter}
-                onChange={(e) => setRiskFilter(e.target.value)}
-                aria-label="위험도 필터"
-              >
-                <option value="all">위험도: 전체</option>
-                <option value="high">고위험</option>
-                <option value="medium">주의</option>
-                <option value="low">양호</option>
-              </Select>
-              <Select
-                value={cancerFilter}
-                onChange={(e) => setCancerFilter(e.target.value)}
-                aria-label="암종류 필터"
-              >
-                <option value="all">암종류: 전체</option>
-                {Array.from(
-                  new Set(patients.map((p) => p.cancerType).filter(Boolean))
-                ).map((ct) => (
-                  <option key={ct} value={ct}>
-                    {ct}
-                  </option>
-                ))}
-              </Select>
-              <Select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                aria-label="정렬 기준"
-              >
-                <option value="recent">최근 보관순</option>
-                <option value="name">이름순</option>
-                <option value="risk">위험도순</option>
-              </Select>
-            </FilterGroup>
-            <OutlineButton onClick={handleExportCSV} title="CSV로 내보내기">
-              CSV 다운로드
-            </OutlineButton>
-            <OutlineButton onClick={() => navigate("/")}>
-              대시보드로
-            </OutlineButton>
-          </CardActions>
-        </CardHeader>
+    <Layout title="보관 환자">
+      <Section>
+        <StatGrid>
+          <StatCard>
+            <StatLabel>보관 환자 수</StatLabel>
+            <StatValue style={{ color: primaryBlue }}>{stats.total}</StatValue>
+          </StatCard>
+          <StatCard>
+            <StatLabel>고위험</StatLabel>
+            <StatValue style={{ color: dangerRed }}>{stats.high}</StatValue>
+          </StatCard>
+          <StatCard>
+            <StatLabel>최근 30일 보관</StatLabel>
+            <StatValue style={{ color: midBlue }}>{stats.recent30}</StatValue>
+          </StatCard>
+          <StatCard>
+            <StatLabel>복귀 가능</StatLabel>
+            <StatValue style={{ color: okGreen }}>{stats.restorable}</StatValue>
+          </StatCard>
+        </StatGrid>
+        <Card>
+          <CardHeader>
+            <CardTitle>보관 환자 목록</CardTitle>
+            <CardActions>
+              <FilterGroup>
+                <TextInput
+                  type="text"
+                  placeholder="이름/ID 검색"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  aria-label="보관 환자 검색"
+                />
+                <Select
+                  value={riskFilter}
+                  onChange={(e) => setRiskFilter(e.target.value)}
+                  aria-label="위험도 필터"
+                >
+                  <option value="all">위험도: 전체</option>
+                  <option value="high">고위험</option>
+                  <option value="medium">주의</option>
+                  <option value="low">양호</option>
+                </Select>
+                <Select
+                  value={cancerFilter}
+                  onChange={(e) => setCancerFilter(e.target.value)}
+                  aria-label="암종류 필터"
+                >
+                  <option value="all">암종류: 전체</option>
+                  {Array.from(
+                    new Set(patients.map((p) => p.cancerType).filter(Boolean))
+                  ).map((ct) => (
+                    <option key={ct} value={ct}>
+                      {ct}
+                    </option>
+                  ))}
+                </Select>
+                <Select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  aria-label="정렬 기준"
+                >
+                  <option value="recent">최근 보관순</option>
+                  <option value="name">이름순</option>
+                  <option value="risk">위험도순</option>
+                </Select>
+              </FilterGroup>
+              <OutlineButton onClick={handleExportCSV} title="CSV로 내보내기">
+                CSV 다운로드
+              </OutlineButton>
+              <OutlineButton onClick={() => navigate("/")}>
+                대시보드로
+              </OutlineButton>
+            </CardActions>
+          </CardHeader>
 
-        {loading ? (
-          <div style={{ padding: "16px" }}>불러오는 중…</div>
-        ) : displayedPatients.length === 0 ? (
-          <div style={{ padding: "24px", color: "#666" }}>
-            보관된 환자가 없습니다.
-          </div>
-        ) : (
-          <TableWrapper>
-            <Table>
-              <StickyThead>
-                <tr>
-                  <Th>이름</Th>
-                  <Th>생년월일</Th>
-                  <Th>암종류</Th>
-                  <Th>진단시기</Th>
-                  <Th>연락처</Th>
-                  <Th>위험도</Th>
-                  <Th>보관일</Th>
-                  <Th>작업</Th>
-                </tr>
-              </StickyThead>
-              <tbody>
-                {displayedPatients.map((p) => (
-                  <Tr key={p.id}>
-                    <Td>
-                      <Link to={`/patients/${p.id}`}>{p.name || "익명"}</Link>
-                    </Td>
-                    <Td>{p.birthDate || "-"}</Td>
-                    <Td>{p.cancerType || "-"}</Td>
-                    <Td>{p.diagnosisDate || "-"}</Td>
-                    <Td>{p.phone || "-"}</Td>
-                    <Td>
-                      <RiskBadge level={p.riskLevel}>
-                        {p.riskLevel || "-"}
-                      </RiskBadge>
-                    </Td>
-                    <Td>{formatDate(getArchivedDate(p))}</Td>
-                    <Td>
-                      <Actions>
-                        <OutlineButton
-                          onClick={() => handleUnarchive(p.id)}
-                          aria-label="보관 해제"
-                        >
-                          복귀
-                        </OutlineButton>
-                        <DangerButton
-                          onClick={() => handleDelete(p.id)}
-                          aria-label="환자 삭제"
-                        >
-                          삭제
-                        </DangerButton>
-                      </Actions>
-                    </Td>
-                  </Tr>
-                ))}
-              </tbody>
-            </Table>
-          </TableWrapper>
-        )}
-      </Card>
-      <ChartRow>
-        <ChartCard>
-          <ChartTitle>암 종류별 분포</ChartTitle>
-          {Object.keys(stats.byCancer).length === 0 ? (
-            <div style={{ color: "#666" }}>데이터 없음</div>
+          {loading ? (
+            <div style={{ padding: "16px" }}>불러오는 중…</div>
+          ) : displayedPatients.length === 0 ? (
+            <div style={{ padding: "24px", color: "#666" }}>
+              보관된 환자가 없습니다.
+            </div>
           ) : (
-            Object.entries(stats.byCancer).map(([key, val]) => (
-              <BarRow key={key}>
+            <TableWrapper>
+              <Table>
+                <StickyThead>
+                  <tr>
+                    <Th>이름</Th>
+                    <Th>생년월일</Th>
+                    <Th>암종류</Th>
+                    <Th>진단시기</Th>
+                    <Th>연락처</Th>
+                    <Th>위험도</Th>
+                    <Th>보관일</Th>
+                    <Th>작업</Th>
+                  </tr>
+                </StickyThead>
+                <tbody>
+                  {displayedPatients.map((p) => (
+                    <Tr key={p.id}>
+                      <Td>
+                        <Link to={`/patients/${p.id}`}>{p.name || "익명"}</Link>
+                      </Td>
+                      <Td>{p.birthDate || "-"}</Td>
+                      <Td>{p.cancerType || "-"}</Td>
+                      <Td>{p.diagnosisDate || "-"}</Td>
+                      <Td>{p.phone || "-"}</Td>
+                      <Td>
+                        <RiskBadge level={p.riskLevel}>
+                          {p.riskLevel || "-"}
+                        </RiskBadge>
+                      </Td>
+                      <Td>{formatDate(getArchivedDate(p))}</Td>
+                      <Td>
+                        <Actions>
+                          <OutlineButton
+                            onClick={() => handleUnarchive(p.id)}
+                            aria-label="보관 해제"
+                          >
+                            복귀
+                          </OutlineButton>
+                          <DangerButton
+                            onClick={() => handleDelete(p.id)}
+                            aria-label="환자 삭제"
+                          >
+                            삭제
+                          </DangerButton>
+                        </Actions>
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            </TableWrapper>
+          )}
+        </Card>
+        <ChartRow>
+          <ChartCard>
+            <ChartTitle>암 종류별 분포</ChartTitle>
+            {Object.keys(stats.byCancer).length === 0 ? (
+              <div style={{ color: "#666" }}>데이터 없음</div>
+            ) : (
+              Object.entries(stats.byCancer).map(([key, val]) => (
+                <BarRow key={key}>
+                  <div>
+                    <LegendDot color={midBlue} />
+                    {key}
+                  </div>
+                  <div
+                    style={{
+                      background: "#eef2ff",
+                      borderRadius: 999,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Bar
+                      color={midBlue}
+                      style={{
+                        width: `${Math.round((val / stats.maxCancer) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <div style={{ textAlign: "right" }}>{val}</div>
+                </BarRow>
+              ))
+            )}
+          </ChartCard>
+
+          <ChartCard>
+            <ChartTitle>위험도 분포</ChartTitle>
+            {["high", "medium", "low"].map((lvl) => (
+              <BarRow key={lvl}>
                 <div>
-                  <LegendDot color={midBlue} />
-                  {key}
+                  <LegendDot
+                    color={
+                      lvl === "high"
+                        ? dangerRed
+                        : lvl === "medium"
+                        ? warnOrange
+                        : okGreen
+                    }
+                  />
+                  {lvl === "high"
+                    ? "고위험"
+                    : lvl === "medium"
+                    ? "주의"
+                    : "양호"}
                 </div>
                 <div
                   style={{
@@ -587,61 +629,28 @@ export default function ArchivedPatientsPage() {
                   }}
                 >
                   <Bar
-                    color={midBlue}
+                    color={
+                      lvl === "high"
+                        ? dangerRed
+                        : lvl === "medium"
+                        ? warnOrange
+                        : okGreen
+                    }
                     style={{
-                      width: `${Math.round((val / stats.maxCancer) * 100)}%`,
+                      width: `${Math.round(
+                        ((stats.byRisk[lvl] || 0) / stats.maxRisk) * 100
+                      )}%`,
                     }}
                   />
                 </div>
-                <div style={{ textAlign: "right" }}>{val}</div>
+                <div style={{ textAlign: "right" }}>
+                  {stats.byRisk[lvl] || 0}
+                </div>
               </BarRow>
-            ))
-          )}
-        </ChartCard>
-
-        <ChartCard>
-          <ChartTitle>위험도 분포</ChartTitle>
-          {["high", "medium", "low"].map((lvl) => (
-            <BarRow key={lvl}>
-              <div>
-                <LegendDot
-                  color={
-                    lvl === "high"
-                      ? dangerRed
-                      : lvl === "medium"
-                      ? warnOrange
-                      : okGreen
-                  }
-                />
-                {lvl === "high" ? "고위험" : lvl === "medium" ? "주의" : "양호"}
-              </div>
-              <div
-                style={{
-                  background: "#eef2ff",
-                  borderRadius: 999,
-                  overflow: "hidden",
-                }}
-              >
-                <Bar
-                  color={
-                    lvl === "high"
-                      ? dangerRed
-                      : lvl === "medium"
-                      ? warnOrange
-                      : okGreen
-                  }
-                  style={{
-                    width: `${Math.round(
-                      ((stats.byRisk[lvl] || 0) / stats.maxRisk) * 100
-                    )}%`,
-                  }}
-                />
-              </div>
-              <div style={{ textAlign: "right" }}>{stats.byRisk[lvl] || 0}</div>
-            </BarRow>
-          ))}
-        </ChartCard>
-      </ChartRow>
-    </Section>
+            ))}
+          </ChartCard>
+        </ChartRow>
+      </Section>
+    </Layout>
   );
 }

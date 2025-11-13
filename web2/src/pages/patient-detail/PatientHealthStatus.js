@@ -32,6 +32,36 @@ ChartJS.register(
   Legend
 );
 
+// 막대 그래프 꼭대기에 점수 표시하는 플러그인
+const datalabelsPlugin = {
+  id: "datalabels",
+  afterDatasetsDraw: (chart) => {
+    const ctx = chart.ctx;
+
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      const meta = chart.getDatasetMeta(datasetIndex);
+
+      meta.data.forEach((bar, index) => {
+        const value = dataset.data[index];
+        if (typeof value === "number" && value > 0) {
+          const x = bar.x;
+          const y = bar.y;
+
+          ctx.save();
+          ctx.fillStyle = "#111827";
+          ctx.font = "bold 12px Arial";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "bottom";
+          ctx.fillText(value.toFixed(1), x, y - 5);
+          ctx.restore();
+        }
+      });
+    });
+  },
+};
+
+ChartJS.register(datalabelsPlugin);
+
 const KOR_LABEL = {
   physicalChange: "신체적 변화",
   healthManagement: "건강 관리",
@@ -195,6 +225,7 @@ export default function PatientHealthStatus({ lastSurvey, user, patient }) {
       },
       plugins: {
         legend: { display: true },
+        tooltip: { enabled: true },
       },
       maintainAspectRatio: false,
     }),
