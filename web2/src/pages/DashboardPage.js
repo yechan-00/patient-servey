@@ -10,10 +10,18 @@ import {
   onSnapshot,
   doc,
   updateDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { setPatientArchived } from "../utils/FirebaseUtils";
+// import { setPatientArchived } from "../utils/FirebaseUtils"; // 사용되지 않음
 import { deletePatientWithCascade } from "../utils/cascadeDelete";
+// 통합 기능 (선택적 사용)
+import {
+  subscribeIntegratedPatients,
+  getIntegratedCounselingRequests,
+  calculateIntegratedStats,
+  SURVEY_TYPES,
+} from "../utils/IntegratedFirebaseUtils";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -212,7 +220,6 @@ const SearchInput = styled.input`
   padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
   border: 1px solid ${({ theme }) => theme.colors.neutral.lightGrey};
   border-radius: ${({ theme }) => theme.borderRadius.small};
-  margin-left: auto;
   width: 250px;
   font-size: ${({ theme }) => theme.fontSize.sm};
 
@@ -1008,14 +1015,80 @@ function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const patientsPerPage = 5; // 한 페이지당 5명의 환자만 표시
 
+  // 통합 모드: 설문 유형 선택 (기본값: "survivor" - 기존 동작 유지)
+  const [surveyType, setSurveyType] = useState(SURVEY_TYPES.SURVIVOR);
+  const useIntegratedMode = surveyType !== SURVEY_TYPES.SURVIVOR; // 생존자만이면 기존 모드
+
   // 보조 상태: 원본 patients와 최신 요청 맵을 분리 보관
   const [patientsRaw, setPatientsRaw] = useState([]);
   const [latestRequestByUser, setLatestRequestByUser] = useState(new Map());
   // users/{id} 보조 소스 (설문/결과가 users에 분산 저장된 경우 보강)
   const [usersById, setUsersById] = useState(new Map());
   const [selectedIds, setSelectedIds] = useState(new Set());
+
+  // 통합 모드: 통합 users 구독 (환자 또는 전체 선택 시)
+  useEffect(() => {
+    if (!useIntegratedMode) return;
+
+    const unsubscribers = [];
+    let survivorsUsersMap = new Map();
+    let patientsUsersMap = new Map();
+
+    // 두 맵을 합치는 헬퍼
+    const mergeAndSet = () => {
+      const merged = new Map();
+      survivorsUsersMap.forEach((v, k) => {
+        merged.set(k, { ...v, type: SURVEY_TYPES.SURVIVOR });
+      });
+      patientsUsersMap.forEach((v, k) => {
+        merged.set(k, { ...v, type: SURVEY_TYPES.PATIENT });
+      });
+      setUsersById(merged);
+    };
+
+    // 생존자 users 구독
+    if (
+      surveyType === SURVEY_TYPES.ALL ||
+      surveyType === SURVEY_TYPES.SURVIVOR
+    ) {
+      const unsubSurvivors = onSnapshot(collection(db, "users"), (snap) => {
+        survivorsUsersMap = new Map();
+        snap.forEach((d) => {
+          survivorsUsersMap.set(d.id, d.data() || {});
+        });
+        mergeAndSet();
+      });
+      unsubscribers.push(unsubSurvivors);
+    }
+
+    // 환자 users 구독
+    if (
+      surveyType === SURVEY_TYPES.ALL ||
+      surveyType === SURVEY_TYPES.PATIENT
+    ) {
+      const unsubPatients = onSnapshot(
+        collection(db, "patients_users"),
+        (snap) => {
+          patientsUsersMap = new Map();
+          snap.forEach((d) => {
+            patientsUsersMap.set(d.id, d.data() || {});
+          });
+          mergeAndSet();
+        }
+      );
+      unsubscribers.push(unsubPatients);
+    }
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
+  }, [surveyType, useIntegratedMode]);
+
+  // 기존 모드: 생존자 users만 구독 (기존 로직 그대로 유지)
   // 실시간: users (설문/결과 분산 저장 보정용)
   useEffect(() => {
+    if (useIntegratedMode) return; // 통합 모드면 이 useEffect는 실행 안 함
+
     const unsub = onSnapshot(
       collection(db, "users"),
       (snap) => {
@@ -1032,7 +1105,7 @@ function DashboardPage() {
       }
     );
     return () => unsub();
-  }, []);
+  }, [useIntegratedMode]);
   // 상담 상태 드롭다운 열림 대상(환자 id)
   const [openStatusMenuId, setOpenStatusMenuId] = useState(null);
   // 상태 칩 클릭: 항상 열기 (중복 클릭으로 즉시 닫히는 현상 방지)
@@ -1091,11 +1164,73 @@ function DashboardPage() {
     };
   }
 
+  // 통합 모드: 통합 환자 구독 (환자 또는 전체 선택 시)
+  useEffect(() => {
+    if (!useIntegratedMode) return; // 생존자만이면 기존 useEffect 사용
+
+    setLoading(true);
+    const unsub = subscribeIntegratedPatients(
+      { surveyType, showArchived },
+      (integratedPatients) => {
+        // 한 달 전 (신규 환자 계산용)
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+        // 통합 환자 데이터 처리 (기존 로직과 유사하게)
+        const processed = integratedPatients
+          .filter((p) => {
+            if (!showArchived && p.archived === true) return false;
+            if (!p.lastSurveyAt) return false;
+            return true;
+          })
+          .map((p) => ({
+            ...p,
+            type: p.type || SURVEY_TYPES.SURVIVOR, // 타입 필드 보장
+          }));
+
+        // 정렬: createdAt desc
+        processed.sort((a, b) => {
+          const ad = a.createdAt ? a.createdAt.getTime() : -Infinity;
+          const bd = b.createdAt ? b.createdAt.getTime() : -Infinity;
+          return bd - ad;
+        });
+
+        // 통합 모드에서는 patientsRaw에 직접 저장 (기존 병합 로직과 동일하게)
+        setPatientsRaw(processed);
+
+        // 통계 계산 (통합 통계 사용)
+        const stats = calculateIntegratedStats(processed);
+        const targetStats =
+          surveyType === SURVEY_TYPES.ALL
+            ? stats.all
+            : surveyType === SURVEY_TYPES.SURVIVOR
+            ? stats.survivors
+            : stats.patients;
+
+        setStatsData((prev) => ({
+          ...prev,
+          totalPatients: targetStats.total,
+          newPatients: processed.filter(
+            (p) => p.createdAt && p.createdAt > oneMonthAgo
+          ).length,
+          highRiskPatients: targetStats.highRisk,
+        }));
+
+        setLoading(false);
+      }
+    );
+
+    return () => unsub();
+  }, [surveyType, showArchived, useIntegratedMode]);
+
+  // 기존 모드: 생존자만 구독 (기존 로직 그대로 유지)
   // 실시간: patients (모든 문서 구독 후 클라이언트에서 archived 필터)
   // 기존에는 where("archived","==",false)로 쿼리하여 archived 필드가 없는 문서가 전부 제외됨.
   // 과거 문서는 archived 필드가 없기 때문에 목록에서 빠졌고, 그 결과 "patients가 안 뜨는" 현상이 발생.
   // 해결: 전체 컬렉션을 구독하고, 화면에서는 archived !== true 인 것만 노출.
   useEffect(() => {
+    if (useIntegratedMode) return; // 통합 모드면 이 useEffect는 실행 안 함
+
     setLoading(true);
     const patientsRef = collection(db, "patients");
 
@@ -1348,10 +1483,65 @@ function DashboardPage() {
     );
 
     return () => unsubPatients();
-  }, [showArchived]);
+  }, [showArchived, useIntegratedMode]);
 
+  // 통합 모드: 통합 상담 요청 구독
+  useEffect(() => {
+    if (!useIntegratedMode) return;
+
+    (async () => {
+      try {
+        const integratedRequests = await getIntegratedCounselingRequests({
+          surveyType,
+        });
+
+        const activities = integratedRequests.slice(0, 5).map((r) => ({
+          id: r.id,
+          ...r,
+          createdAt: r.createdAt?.toDate?.() || new Date(r.createdAt || 0),
+        }));
+
+        setRecentActivities(activities);
+
+        // 최신 요청 맵 생성
+        const latest = new Map();
+        for (const a of integratedRequests) {
+          const uid = a.userId;
+          if (uid && uid.trim() !== "") {
+            const existing = latest.get(uid);
+            const aTime = a.createdAt?.toDate?.()?.getTime() || 0;
+            const existingTime = existing?.createdAt?.getTime() || 0;
+            if (!existing || aTime > existingTime) {
+              latest.set(uid, {
+                id: a.id,
+                status: a.status || "pending",
+                createdAt: a.createdAt?.toDate?.() || new Date(0),
+                name: a.name || "",
+              });
+            }
+          }
+        }
+
+        const pendingUsers = Array.from(latest.values()).filter(
+          (v) => (v.status || "pending") === "pending"
+        ).length;
+
+        setLatestRequestByUser(new Map(latest));
+        setStatsData((prev) => ({ ...prev, pendingRequests: pendingUsers }));
+      } catch (error) {
+        console.error(
+          "[Dashboard] Integrated counseling requests error:",
+          error
+        );
+      }
+    })();
+  }, [surveyType, useIntegratedMode]);
+
+  // 기존 모드: 생존자 상담 요청만 구독 (기존 로직 그대로 유지)
   // 실시간: counselingRequests (최근 요청/활동/대기 건수)
   useEffect(() => {
+    if (useIntegratedMode) return; // 통합 모드면 이 useEffect는 실행 안 함
+
     const q = query(collection(db, "counselingRequests")); // 서버 정렬 제거
     const unsubReq = onSnapshot(
       q,
@@ -1423,7 +1613,7 @@ function DashboardPage() {
     );
 
     return () => unsubReq();
-  }, []);
+  }, [useIntegratedMode]);
 
   // latestRequestByUser 변경 시 pendingRequests 카운트 재계산
   // Map의 내용을 기반으로 한 키를 생성하여 변경 감지
@@ -1902,6 +2092,30 @@ function DashboardPage() {
             <CardHeader>
               <FilterBar>
                 <FilterGroup>
+                  <FilterLabel htmlFor="surveyType">설문 유형:</FilterLabel>
+                  <FilterSelect
+                    id="surveyType"
+                    value={surveyType}
+                    onChange={(e) => setSurveyType(e.target.value)}
+                  >
+                    <option value={SURVEY_TYPES.SURVIVOR}>생존자 설문</option>
+                    <option value={SURVEY_TYPES.PATIENT}>환자 설문</option>
+                    <option value={SURVEY_TYPES.ALL}>전체</option>
+                  </FilterSelect>
+                </FilterGroup>
+
+                <FilterGroup>
+                  <input
+                    id="toggleArchived"
+                    type="checkbox"
+                    checked={showArchived}
+                    onChange={(e) => setShowArchived(e.target.checked)}
+                    style={{ marginRight: 6 }}
+                  />
+                  <FilterLabel htmlFor="toggleArchived">보관 포함</FilterLabel>
+                </FilterGroup>
+
+                <FilterGroup>
                   <FilterLabel htmlFor="riskLevel">위험도:</FilterLabel>
                   <FilterSelect
                     id="riskLevel"
@@ -1954,24 +2168,6 @@ function DashboardPage() {
                   </FilterSelect>
                 </FilterGroup>
 
-                <FilterGroup>
-                  <input
-                    id="toggleArchived"
-                    type="checkbox"
-                    checked={showArchived}
-                    onChange={(e) => setShowArchived(e.target.checked)}
-                    style={{ marginRight: 6 }}
-                  />
-                  <FilterLabel htmlFor="toggleArchived">보관 포함</FilterLabel>
-                </FilterGroup>
-
-                <SearchInput
-                  type="text"
-                  name="searchTerm"
-                  value={filters.searchTerm}
-                  onChange={handleFilterChange}
-                  placeholder="환자 이름 검색..."
-                />
                 <Link
                   to="/archived"
                   style={{
@@ -2031,6 +2227,16 @@ function DashboardPage() {
                   선택 삭제
                 </button>
               </FilterBar>
+
+              <div style={{ marginTop: 16 }}>
+                <SearchInput
+                  type="text"
+                  name="searchTerm"
+                  value={filters.searchTerm}
+                  onChange={handleFilterChange}
+                  placeholder="환자 이름 검색..."
+                />
+              </div>
             </CardHeader>
 
             <CardContent>
@@ -2052,6 +2258,7 @@ function DashboardPage() {
                       />
                     </HeaderCell>
                     <HeaderCell>이름</HeaderCell>
+                    {useIntegratedMode && <HeaderCell>유형</HeaderCell>}
                     <HeaderCell>생년월일</HeaderCell>
                     <HeaderCell>암 종류</HeaderCell>
                     <HeaderCell>진단 시기</HeaderCell>
@@ -2064,7 +2271,10 @@ function DashboardPage() {
                 <TableBody>
                   {filteredPatients.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan="9" style={{ textAlign: "center" }}>
+                      <TableCell
+                        colSpan={useIntegratedMode ? 10 : 9}
+                        style={{ textAlign: "center" }}
+                      >
                         {loading
                           ? "데이터를 불러오는 중..."
                           : "환자 데이터가 없습니다."}
@@ -2094,6 +2304,35 @@ function DashboardPage() {
                               {patient.name || "익명"}
                             </StyledLink>
                           </TableCell>
+                          {useIntegratedMode && (
+                            <TableCell>
+                              <Badge
+                                $variant={
+                                  patient.type === SURVEY_TYPES.PATIENT
+                                    ? "medium"
+                                    : "low"
+                                }
+                                style={{
+                                  backgroundColor:
+                                    patient.type === SURVEY_TYPES.PATIENT
+                                      ? "#fff3e0"
+                                      : "#e8f5e9",
+                                  border:
+                                    patient.type === SURVEY_TYPES.PATIENT
+                                      ? "1px solid #ffb74d"
+                                      : "1px solid #81c784",
+                                  color:
+                                    patient.type === SURVEY_TYPES.PATIENT
+                                      ? "#ef6c00"
+                                      : "#2e7d32",
+                                }}
+                              >
+                                {patient.type === SURVEY_TYPES.PATIENT
+                                  ? "환자"
+                                  : "생존자"}
+                              </Badge>
+                            </TableCell>
+                          )}
                           <TableCell>
                             {formatBirthDate(patient.birthDate)}
                           </TableCell>
@@ -2207,7 +2446,23 @@ function DashboardPage() {
                                 )
                                   return;
                                 try {
-                                  await setPatientArchived(patient.id, true);
+                                  // 통합 모드: 타입에 따라 컬렉션 선택
+                                  const patientType =
+                                    patient.type || SURVEY_TYPES.SURVIVOR;
+                                  const patientsCollection =
+                                    patientType === SURVEY_TYPES.PATIENT
+                                      ? "patients_patients"
+                                      : "patients";
+
+                                  await updateDoc(
+                                    doc(db, patientsCollection, patient.id),
+                                    {
+                                      archived: true,
+                                      archivedAt: serverTimestamp(),
+                                      updatedAt: serverTimestamp(),
+                                    }
+                                  );
+
                                   if (!showArchived) {
                                     setPatients((prev) =>
                                       prev.filter((p) => p.id !== patient.id)
@@ -2347,23 +2602,39 @@ function DashboardPage() {
                   setOpenStatusMenuId(null);
 
                   try {
-                    // 2) Persist to patients/{id}
-                    await updateDoc(doc(db, "patients", targetId), {
+                    // 2) Persist to patients/{id} (타입에 따라 컬렉션 선택)
+                    const targetPatient = filteredPatients.find(
+                      (p) => p.id === targetId
+                    );
+                    const patientType =
+                      targetPatient?.type || SURVEY_TYPES.SURVIVOR;
+                    const patientsCollection =
+                      patientType === SURVEY_TYPES.PATIENT
+                        ? "patients_patients"
+                        : "patients";
+
+                    await updateDoc(doc(db, patientsCollection, targetId), {
                       counselingStatus: nextUi,
                       updatedAt: new Date().toISOString(),
                     });
                     console.log("[StatusSelect] patients updated", {
                       id: targetId,
+                      collection: patientsCollection,
                       counselingStatus: nextUi,
                     });
 
-                    // 3) Best-effort sync to latest counselingRequests
+                    // 3) Best-effort sync to latest counselingRequests (타입에 따라 컬렉션 선택)
                     const latest = latestRequestByUser.get(targetId);
                     if (latest && latest.id) {
                       try {
                         const raw = uiToRawRequestStatus(nextUi);
+                        const requestsCollection =
+                          patientType === SURVEY_TYPES.PATIENT
+                            ? "patients_counselingRequests"
+                            : "counselingRequests";
+
                         await updateDoc(
-                          doc(db, "counselingRequests", latest.id),
+                          doc(db, requestsCollection, latest.id),
                           {
                             status: raw,
                             updatedAt: new Date().toISOString(),
@@ -2371,7 +2642,11 @@ function DashboardPage() {
                         );
                         console.log(
                           "[StatusSelect] counselingRequests updated",
-                          { requestId: latest.id, status: raw }
+                          {
+                            requestId: latest.id,
+                            collection: requestsCollection,
+                            status: raw,
+                          }
                         );
                         setLatestRequestByUser((prev) => {
                           const next = new Map(prev);
