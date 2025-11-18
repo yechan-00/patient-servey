@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/patient-servey/web3/static/css/main.e6c13ad2.css",
+    "main.js": "/patient-servey/web3/static/js/main.5798ed09.js",
+    "static/js/453.45aa0b70.chunk.js": "/patient-servey/web3/static/js/453.45aa0b70.chunk.js",
+    "index.html": "/patient-servey/web3/index.html",
+    "main.e6c13ad2.css.map": "/patient-servey/web3/static/css/main.e6c13ad2.css.map",
+    "main.5798ed09.js.map": "/patient-servey/web3/static/js/main.5798ed09.js.map",
+    "453.45aa0b70.chunk.js.map": "/patient-servey/web3/static/js/453.45aa0b70.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e6c13ad2.css",
+    "static/js/main.5798ed09.js"
+  ]
+}
