@@ -667,6 +667,8 @@ export function buildViewModel({
       "currentAlcoholSoju",
       "lifestyle.alcohol.current.soju",
       "alcoholSoju",
+      "소주",
+      "alcohol.soju",
     ])
   );
   const alcoholBeer = coalesce(
@@ -675,6 +677,8 @@ export function buildViewModel({
       "currentAlcoholBeer",
       "lifestyle.alcohol.current.beer",
       "alcoholBeer",
+      "맥주",
+      "alcohol.beer",
     ])
   );
   const alcoholOther = coalesce(
@@ -683,6 +687,8 @@ export function buildViewModel({
       "currentAlcoholOther",
       "lifestyle.alcohol.current.other",
       "alcoholOther",
+      "기타",
+      "alcohol.other",
     ])
   );
 
@@ -729,15 +735,28 @@ export function buildViewModel({
 
     // 현재 음주량 표시 (상세 정보가 있으면 항상 표시)
     const currentParts = [];
-    if (alcoholSoju && String(alcoholSoju).trim() !== "")
-      currentParts.push(`소주: ${alcoholSoju}`);
-    if (alcoholBeer && String(alcoholBeer).trim() !== "")
-      currentParts.push(`맥주: ${alcoholBeer}`);
-    if (alcoholOther && String(alcoholOther).trim() !== "")
-      currentParts.push(`기타: ${alcoholOther}`);
+    const sojuValue = alcoholSoju ? String(alcoholSoju).trim() : "";
+    const beerValue = alcoholBeer ? String(alcoholBeer).trim() : "";
+    const otherValue = alcoholOther ? String(alcoholOther).trim() : "";
+    
+    if (sojuValue !== "" && sojuValue !== "0" && sojuValue !== "없음")
+      currentParts.push(`소주: ${sojuValue}`);
+    if (beerValue !== "" && beerValue !== "0" && beerValue !== "없음")
+      currentParts.push(`맥주: ${beerValue}`);
+    if (otherValue !== "" && otherValue !== "0" && otherValue !== "없음")
+      currentParts.push(`기타: ${otherValue}`);
 
     if (currentParts.length > 0) {
       lines.push(`현재 음주량: ${currentParts.join(", ")}`);
+    } else if (sojuValue || beerValue || otherValue) {
+      // 값이 있지만 모두 0이거나 "없음"인 경우
+      const emptyParts = [];
+      if (sojuValue) emptyParts.push(`소주: ${sojuValue}`);
+      if (beerValue) emptyParts.push(`맥주: ${beerValue}`);
+      if (otherValue) emptyParts.push(`기타: ${otherValue}`);
+      if (emptyParts.length > 0) {
+        lines.push(`현재 음주량: ${emptyParts.join(", ")}`);
+      }
     }
 
     // 실패 이유 표시
@@ -783,6 +802,8 @@ export function buildViewModel({
       "currentSmokingRegular",
       "lifestyle.smoking.current.regular",
       "smokingRegular",
+      "연초",
+      "smoking.regular",
     ])
   );
   const smokingElectronic = coalesce(
@@ -792,6 +813,8 @@ export function buildViewModel({
       "currentSmokingElectronic",
       "lifestyle.smoking.current.electronic",
       "smokingElectronic",
+      "전자담배",
+      "smoking.electronic",
     ])
   );
   const smokingOther = coalesce(
@@ -800,6 +823,8 @@ export function buildViewModel({
       "currentSmokingOther",
       "lifestyle.smoking.current.other",
       "smokingOther",
+      "기타",
+      "smoking.other",
     ])
   );
 
@@ -846,15 +871,28 @@ export function buildViewModel({
 
     // 현재 흡연량 표시 (상세 정보가 있으면 항상 표시)
     const currentParts = [];
-    if (smokingRegular && String(smokingRegular).trim() !== "")
-      currentParts.push(`연초: ${smokingRegular}`);
-    if (smokingElectronic && String(smokingElectronic).trim() !== "")
-      currentParts.push(`전자담배: ${smokingElectronic}`);
-    if (smokingOther && String(smokingOther).trim() !== "")
-      currentParts.push(`기타: ${smokingOther}`);
+    const regularValue = smokingRegular ? String(smokingRegular).trim() : "";
+    const electronicValue = smokingElectronic ? String(smokingElectronic).trim() : "";
+    const otherValue = smokingOther ? String(smokingOther).trim() : "";
+    
+    if (regularValue !== "" && regularValue !== "0" && regularValue !== "없음")
+      currentParts.push(`연초: ${regularValue}`);
+    if (electronicValue !== "" && electronicValue !== "0" && electronicValue !== "없음")
+      currentParts.push(`전자담배: ${electronicValue}`);
+    if (otherValue !== "" && otherValue !== "0" && otherValue !== "없음")
+      currentParts.push(`기타: ${otherValue}`);
 
     if (currentParts.length > 0) {
       lines.push(`현재 흡연량: ${currentParts.join(", ")}`);
+    } else if (regularValue || electronicValue || otherValue) {
+      // 값이 있지만 모두 0이거나 "없음"인 경우
+      const emptyParts = [];
+      if (regularValue) emptyParts.push(`연초: ${regularValue}`);
+      if (electronicValue) emptyParts.push(`전자담배: ${electronicValue}`);
+      if (otherValue) emptyParts.push(`기타: ${otherValue}`);
+      if (emptyParts.length > 0) {
+        lines.push(`현재 흡연량: ${emptyParts.join(", ")}`);
+      }
     }
 
     // 실패 이유 표시

@@ -12,6 +12,8 @@ import {
   getDoc,
   onSnapshot,
   orderBy,
+  updateDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { COLLECTIONS, SURVEY_TYPES } from "./collectionConfig";
 
@@ -89,6 +91,10 @@ export async function getIntegratedPatients({
           diagnosisDate: fmtDate(v.diagnosisDate),
           riskLevel: normalizeRiskLevel(v.riskLevel) || v.riskLevel || "",
           counselingStatus: v.counselingStatus ?? "미요청",
+          requested:
+            v.requested === true ||
+            v.counselingStatus === "요청" ||
+            v.counselingStatus === "대기",
           archived: !!v.archived,
           createdAt,
           lastSurveyAt,
@@ -135,6 +141,10 @@ export async function getIntegratedPatients({
           diagnosisDate: fmtDate(v.diagnosisDate),
           riskLevel: normalizeRiskLevel(v.riskLevel) || v.riskLevel || "",
           counselingStatus: v.counselingStatus ?? "미요청",
+          requested:
+            v.requested === true ||
+            v.counselingStatus === "요청" ||
+            v.counselingStatus === "대기",
           archived: !!v.archived,
           createdAt,
           lastSurveyAt,
@@ -204,7 +214,17 @@ export function subscribeIntegratedPatients(
           null;
         return {
           id: d.id,
-          ...v,
+          name: v.name ?? "",
+          birthDate: fmtDate(v.birthDate),
+          cancerType: v.cancerType ?? "",
+          diagnosisDate: fmtDate(v.diagnosisDate),
+          riskLevel: normalizeRiskLevel(v.riskLevel) || v.riskLevel || "",
+          counselingStatus: v.counselingStatus ?? "미요청",
+          requested:
+            v.requested === true ||
+            v.counselingStatus === "요청" ||
+            v.counselingStatus === "대기",
+          archived: !!v.archived,
           createdAt,
           lastSurveyAt,
           type: SURVEY_TYPES.SURVIVOR,
@@ -240,7 +260,17 @@ export function subscribeIntegratedPatients(
           null;
         return {
           id: d.id,
-          ...v,
+          name: v.name ?? "",
+          birthDate: fmtDate(v.birthDate),
+          cancerType: v.cancerType ?? "",
+          diagnosisDate: fmtDate(v.diagnosisDate),
+          riskLevel: normalizeRiskLevel(v.riskLevel) || v.riskLevel || "",
+          counselingStatus: v.counselingStatus ?? "미요청",
+          requested:
+            v.requested === true ||
+            v.counselingStatus === "요청" ||
+            v.counselingStatus === "대기",
+          archived: !!v.archived,
           createdAt,
           lastSurveyAt,
           type: SURVEY_TYPES.PATIENT,
@@ -392,6 +422,72 @@ export async function getIntegratedPatientDetail(patientId) {
   return null;
 }
 
+/**
+ * 통합 상담 상태 업데이트 (타입 자동 감지)
+ * @param {string} patientId
+ * @param {string} nextStatus - "미요청" | "요청" | "진행중" | "완료" | "보관"
+ */
+export async function updateIntegratedPatientStatus(patientId, nextStatus) {
+  const COUNSELING_STATUSES = ["미요청", "요청", "진행중", "완료", "보관"];
+  if (!COUNSELING_STATUSES.includes(nextStatus)) {
+    throw new Error(`Unknown counselingStatus: ${nextStatus}`);
+  }
+
+  // 먼저 타입 확인
+  const detail = await getIntegratedPatientDetail(patientId);
+  if (!detail) {
+    throw new Error("환자 정보를 찾을 수 없습니다.");
+  }
+
+  const isPatient = detail.type === SURVEY_TYPES.PATIENT;
+  const patientsCollection = isPatient
+    ? COLLECTIONS.PATIENTS.PATIENTS
+    : COLLECTIONS.SURVIVORS.PATIENTS;
+
+  const ref = doc(db, patientsCollection, patientId);
+  const updateData = {
+    counselingStatus: nextStatus,
+    updatedAt: serverTimestamp(),
+  };
+
+  // 보관 선택 시 archived=true 동반
+  if (nextStatus === "보관") {
+    updateData.archived = true;
+    updateData.archivedAt = serverTimestamp();
+  } else if (nextStatus === "완료" && detail.data?.archived) {
+    // 완료로 변경 시 보관 해제
+    updateData.archived = false;
+    updateData.archivedAt = null;
+  }
+
+  await updateDoc(ref, updateData);
+}
+
+/**
+ * 통합 보관 플래그 토글 (타입 자동 감지)
+ * @param {string} patientId
+ * @param {boolean} archived
+ */
+export async function setIntegratedArchived(patientId, archived) {
+  // 먼저 타입 확인
+  const detail = await getIntegratedPatientDetail(patientId);
+  if (!detail) {
+    throw new Error("환자 정보를 찾을 수 없습니다.");
+  }
+
+  const isPatient = detail.type === SURVEY_TYPES.PATIENT;
+  const patientsCollection = isPatient
+    ? COLLECTIONS.PATIENTS.PATIENTS
+    : COLLECTIONS.SURVIVORS.PATIENTS;
+
+  const ref = doc(db, patientsCollection, patientId);
+  await updateDoc(ref, {
+    archived: !!archived,
+    archivedAt: archived ? serverTimestamp() : null,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 // SURVEY_TYPES를 named export로 추가
 export { SURVEY_TYPES };
 
@@ -401,6 +497,8 @@ const IntegratedFirebaseUtils = {
   getIntegratedCounselingRequests,
   calculateIntegratedStats,
   getIntegratedPatientDetail,
+  updateIntegratedPatientStatus,
+  setIntegratedArchived,
   SURVEY_TYPES,
 };
 

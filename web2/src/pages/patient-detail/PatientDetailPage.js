@@ -2,16 +2,17 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../firebase";
 import Layout from "../../components/Layout";
-import { updatePatientStatus, setArchived } from "../../utils/FirebaseUtils";
 import {
-  loadPatientCore,
-  loadUserForPatient,
-  loadSurveyBundle,
-  loadCounselingBundle,
-} from "../../models/patientData";
+  updateIntegratedPatientStatus,
+  setIntegratedArchived,
+} from "../../utils/IntegratedFirebaseUtils";
+import {
+  loadIntegratedPatientCore,
+  loadIntegratedSurveyBundle,
+  loadIntegratedCounselingBundle,
+} from "../../models/integratedPatientData";
+import { getIntegratedPatientDetail } from "../../utils/IntegratedFirebaseUtils";
 
 // 하위 섹션 컴포넌트
 import PatientBasicInfo from "./PatientBasicInfo";
@@ -169,38 +170,30 @@ function PatientDetailPage() {
     }
   }, [location]);
 
-  // 환자 코어/설문/상담을 한 번에 로드하여 하위 탭으로 전달
+  // 환자 코어/설문/상담을 한 번에 로드하여 하위 탭으로 전달 (통합 모드)
   useEffect(() => {
     let alive = true;
     async function run() {
       try {
         setLoading(true);
-        // 최적화: users와 patients 문서를 한 번만 읽고 공유
-        const [userSnap, metaSnap] = await Promise.all([
-          getDoc(doc(db, "users", patientId)),
-          getDoc(doc(db, "patients", patientId)),
-        ]);
 
-        if (!userSnap.exists() && !metaSnap.exists()) {
+        // 먼저 환자 타입 확인 (web1/web3 자동 감지)
+        const detail = await getIntegratedPatientDetail(patientId);
+        if (!detail) {
           setError("환자 정보를 찾을 수 없습니다.");
           setLoading(false);
           return;
         }
 
-        const userData = userSnap.exists() ? userSnap.data() || {} : {};
-        const metaData = metaSnap.exists() ? metaSnap.data() || {} : {};
+        const { type } = detail;
 
-        // 1) core(기본 프로필) 로드 (이미 읽은 데이터 전달하여 중복 쿼리 방지)
-        let coreRes;
-        try {
-          coreRes = await loadPatientCore(patientId, {
-            user: userData,
-            meta: metaData,
-          });
-        } catch (e) {
-          console.error("[PatientDetailPage] loadPatientCore 오류:", e);
-          throw new Error(`환자 기본 정보 로드 실패: ${e.message}`);
-        }
+        // 통합 모드로 데이터 로드
+        const [coreRes, surveyRes, counselingRes] = await Promise.all([
+          loadIntegratedPatientCore(patientId),
+          loadIntegratedSurveyBundle(patientId, type),
+          loadIntegratedCounselingBundle(patientId, type),
+        ]);
+
         if (!alive) return;
 
         if (coreRes?.notFound) {
@@ -209,64 +202,21 @@ function PatientDetailPage() {
           return;
         }
 
-        // 2) user 문서 로드 (추가 검색, 선택적) - 이미 읽은 userData 전달하여 중복 쿼리 방지
-        let userDoc;
-        try {
-          userDoc = await loadUserForPatient(
-            patientId,
-            coreRes?.patient?.name,
-            {
-              userData: userData,
-            }
-          );
-        } catch (e) {
-          console.error("[PatientDetailPage] loadUserForPatient 오류:", e);
-          userDoc = {};
-        }
-        if (!alive) return;
-
-        // 3) 설문/상담 병렬 로드 (이미 읽은 user/meta 데이터 전달하여 중복 쿼리 방지)
-        let surveyRes, counselingRes;
-        try {
-          [surveyRes, counselingRes] = await Promise.all([
-            loadSurveyBundle(patientId, { user: userData, meta: metaData }),
-            loadCounselingBundle(patientId),
-          ]);
-        } catch (e) {
-          console.error("[PatientDetailPage] 설문/상담 로드 오류:", e);
-          surveyRes = surveyRes || {};
-          counselingRes = counselingRes || {};
-        }
-        if (!alive) return;
-
         // core에 user 병합 저장
-        setCore({ ...coreRes, user: userDoc || {} });
+        setCore(coreRes);
         setSurvey(surveyRes);
         setCounseling(counselingRes);
 
         // 디버깅: 로드된 데이터 확인
-        console.log("[PatientDetailPage] surveyRes:", surveyRes);
-        console.log(
-          "[PatientDetailPage] surveyRes.lastSurvey:",
-          surveyRes?.lastSurvey
-        );
-        console.log(
-          "[PatientDetailPage] surveyRes.lastSurvey?.profile:",
-          surveyRes?.lastSurvey?.profile
-        );
-        console.log(
-          "[PatientDetailPage] surveyRes.lastSurvey?.profile?.gender:",
-          surveyRes?.lastSurvey?.profile?.gender
-        );
-        console.log(
-          "[PatientDetailPage] surveyRes.lastSurvey?.profile?.maritalStatus:",
-          surveyRes?.lastSurvey?.profile?.maritalStatus
-        );
+        console.log("[PatientDetailPage] Type:", type);
+        console.log("[PatientDetailPage] Core:", coreRes);
+        console.log("[PatientDetailPage] Survey:", surveyRes);
+        console.log("[PatientDetailPage] Counseling:", counselingRes);
 
         const p = coreRes?.patient || {};
         setPatient({
           id: p.id || patientId,
-          name: p.name || (userDoc && userDoc.name) || "익명",
+          name: p.name || "익명",
           counselingStatus: p.counselingStatus || "미요청",
           archived: !!p.archived,
         });
@@ -413,7 +363,8 @@ function PatientDetailPage() {
               onChange={async (e) => {
                 const next = e.target.value;
                 try {
-                  await updatePatientStatus(patient.id, next);
+                  // 통합 모드로 상담 상태 업데이트
+                  await updateIntegratedPatientStatus(patient.id, next);
                   setPatient((prev) => ({
                     ...prev,
                     counselingStatus: next,
@@ -438,7 +389,8 @@ function PatientDetailPage() {
               <Button
                 onClick={async () => {
                   try {
-                    await setArchived(patient.id, false);
+                    // 통합 모드로 보관 해제
+                    await setIntegratedArchived(patient.id, false);
                     setPatient((prev) => ({
                       ...prev,
                       archived: false,
@@ -459,7 +411,8 @@ function PatientDetailPage() {
               <Button
                 onClick={async () => {
                   try {
-                    await setArchived(patient.id, true);
+                    // 통합 모드로 보관 처리
+                    await setIntegratedArchived(patient.id, true);
                     setPatient((prev) => ({
                       ...prev,
                       archived: true,

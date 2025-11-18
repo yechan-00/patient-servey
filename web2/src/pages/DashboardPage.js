@@ -173,6 +173,7 @@ const CardHeader = styled.div`
 const CardContent = styled.div`
   padding: ${({ theme }) => theme.spacing.lg};
   overflow-x: auto; /* 표가 넓어질 때 가로 스크롤 허용 */
+  overflow-y: visible; /* 드롭다운이 잘리지 않도록 */
   min-width: 0; /* flex 컨텍스트에서 내용 축소 허용 */
   position: relative;
   z-index: 3;
@@ -240,6 +241,7 @@ const PatientTable = styled.table`
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+  min-width: 1000px; /* 최소 너비 설정 */
 
   thead th:nth-child(1),
   tbody td:nth-child(1) {
@@ -275,14 +277,23 @@ const PatientTable = styled.table`
   } /* 상담 상태 */
   thead th:nth-child(9),
   tbody td:nth-child(9) {
+    width: 6rem;
+  } /* 치료 상태 */
+  thead th:nth-child(10),
+  tbody td:nth-child(10) {
     width: 5.5rem;
   } /* 보관 */
 
   @media (max-width: ${({ theme }) => theme.breakpoints.lg}) {
+    min-width: 800px;
     thead th:nth-child(2),
     tbody td:nth-child(2) {
       width: 6.5rem;
     }
+  }
+
+  @media (max-width: 768px) {
+    min-width: 600px;
   }
 `;
 
@@ -299,9 +310,30 @@ const HeaderCell = styled.th`
   color: ${({ theme }) => theme.colors.neutral.darkGrey};
   font-size: ${({ theme }) => theme.fontSize.sm};
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   text-overflow: ellipsis;
+  position: relative;
 `;
+
+// 필터 가능한 헤더 셀
+const FilterableHeaderCell = styled(HeaderCell)`
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.neutral.lightGrey};
+  }
+
+  &::after {
+    content: "▼";
+    font-size: 0.7em;
+    margin-left: 4px;
+    opacity: 0.5;
+  }
+`;
+
+// 헤더 필터 드롭다운은 포털로 렌더링되므로 스타일 컴포넌트 제거
 
 // 테이블 바디
 const TableBody = styled.tbody``;
@@ -986,6 +1018,116 @@ function StatusMenuPortal({ anchorEl, open, value, onSelect, onClose }) {
   );
 }
 
+// 헤더 필터 드롭다운 포털
+function HeaderFilterPortal({
+  filterType,
+  open,
+  anchorEl,
+  options,
+  activeValue,
+  onSelect,
+  onClose,
+}) {
+  const menuRef = useRef(null);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+
+  useEffect(() => {
+    function update() {
+      if (!anchorEl) return;
+      const rect = anchorEl.getBoundingClientRect();
+      setPos({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: Math.max(150, rect.width),
+      });
+    }
+    if (open) {
+      update();
+      window.addEventListener("scroll", update, true);
+      window.addEventListener("resize", update);
+    }
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [anchorEl, open]);
+
+  useEffect(() => {
+    const closeOnOutside = (e) => {
+      if (!open) return;
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target) &&
+        anchorEl &&
+        !anchorEl.contains(e.target)
+      ) {
+        onClose?.();
+      }
+    };
+    if (open) {
+      document.addEventListener("mousedown", closeOnOutside);
+    }
+    return () => document.removeEventListener("mousedown", closeOnOutside);
+  }, [open, anchorEl, onClose]);
+
+  if (!open || !anchorEl) return null;
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      data-role="header-filter-menu"
+      onMouseDown={(e) => e.stopPropagation()}
+      style={{
+        position: "absolute",
+        top: pos.top,
+        left: pos.left,
+        minWidth: pos.width,
+        background: "white",
+        border: "1px solid #e0e0e0",
+        borderRadius: 8,
+        boxShadow: "0 8px 16px rgba(0,0,0,0.1)",
+        zIndex: 9999,
+        pointerEvents: "auto",
+        overflow: "hidden",
+        padding: "8px",
+      }}
+    >
+      {options.map((option) => (
+        <div
+          key={option.value}
+          onClick={() => {
+            onSelect?.(option.value);
+            onClose?.();
+          }}
+          style={{
+            padding: "6px 12px",
+            cursor: "pointer",
+            fontSize: "14px",
+            borderRadius: "4px",
+            backgroundColor:
+              activeValue === option.value ? "#e3f2fd" : "transparent",
+            color: activeValue === option.value ? "#1976d2" : "#333",
+            fontWeight: activeValue === option.value ? 600 : 400,
+          }}
+          onMouseEnter={(e) => {
+            if (activeValue !== option.value) {
+              e.currentTarget.style.backgroundColor = "#f5f5f5";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeValue !== option.value) {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }
+          }}
+        >
+          {option.label}
+        </div>
+      ))}
+    </div>,
+    document.body
+  );
+}
+
 function DashboardPage() {
   // 상담 상태 드롭다운 트리거 버튼 ref map
   const triggerRefs = useRef(new Map());
@@ -1015,8 +1157,8 @@ function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const patientsPerPage = 5; // 한 페이지당 5명의 환자만 표시
 
-  // 통합 모드: 설문 유형 선택 (기본값: "survivor" - 기존 동작 유지)
-  const [surveyType, setSurveyType] = useState(SURVEY_TYPES.SURVIVOR);
+  // 통합 모드: 설문 유형 선택 (기본값: "all" - 생존자와 환자 모두 표시)
+  const [surveyType, setSurveyType] = useState(SURVEY_TYPES.ALL);
   const useIntegratedMode = surveyType !== SURVEY_TYPES.SURVIVOR; // 생존자만이면 기존 모드
 
   // 보조 상태: 원본 patients와 최신 요청 맵을 분리 보관
@@ -1108,6 +1250,10 @@ function DashboardPage() {
   }, [useIntegratedMode]);
   // 상담 상태 드롭다운 열림 대상(환자 id)
   const [openStatusMenuId, setOpenStatusMenuId] = useState(null);
+
+  // 헤더 필터 드롭다운 열림 상태
+  const [openHeaderFilter, setOpenHeaderFilter] = useState(null); // "cancerType" | "riskLevel" | "treatmentStatus" | "archived" | null
+  const headerFilterRefs = useRef(new Map());
   // 상태 칩 클릭: 항상 열기 (중복 클릭으로 즉시 닫히는 현상 방지)
   const handleStatusTriggerClick = (e, id) => {
     try {
@@ -1126,7 +1272,7 @@ function DashboardPage() {
       // 트리거/메뉴 내부 클릭은 무시
       if (
         target.closest?.(
-          '[data-role="status-trigger"], [data-role="status-menu"]'
+          '[data-role="status-trigger"], [data-role="status-menu"], [data-role="header-filter-trigger"], [data-role="header-filter-menu"]'
         )
       ) {
         return;
@@ -1134,10 +1280,13 @@ function DashboardPage() {
       if (openStatusMenuId !== null) {
         setOpenStatusMenuId(null);
       }
+      if (openHeaderFilter !== null) {
+        setOpenHeaderFilter(null);
+      }
     };
     document.addEventListener("mousedown", onDocMouseDown);
     return () => document.removeEventListener("mousedown", onDocMouseDown);
-  }, [openStatusMenuId]);
+  }, [openStatusMenuId, openHeaderFilter]);
 
   // 상담 상태 칩 스타일 매핑
   function getStatusChipStyle(status) {
@@ -2104,70 +2253,6 @@ function DashboardPage() {
                   </FilterSelect>
                 </FilterGroup>
 
-                <FilterGroup>
-                  <input
-                    id="toggleArchived"
-                    type="checkbox"
-                    checked={showArchived}
-                    onChange={(e) => setShowArchived(e.target.checked)}
-                    style={{ marginRight: 6 }}
-                  />
-                  <FilterLabel htmlFor="toggleArchived">보관 포함</FilterLabel>
-                </FilterGroup>
-
-                <FilterGroup>
-                  <FilterLabel htmlFor="riskLevel">위험도:</FilterLabel>
-                  <FilterSelect
-                    id="riskLevel"
-                    name="riskLevel"
-                    value={filters.riskLevel}
-                    onChange={handleFilterChange}
-                  >
-                    <option value="all">전체</option>
-                    <option value="high">위험</option>
-                    <option value="medium">주의</option>
-                    <option value="low">양호</option>
-                  </FilterSelect>
-                </FilterGroup>
-
-                <FilterGroup>
-                  <FilterLabel htmlFor="cancerType">암 종류:</FilterLabel>
-                  <FilterSelect
-                    id="cancerType"
-                    name="cancerType"
-                    value={filters.cancerType}
-                    onChange={handleFilterChange}
-                  >
-                    <option value="all">전체</option>
-                    <option value="breast">유방암</option>
-                    <option value="colorectal">대장암</option>
-                    <option value="lung">폐암</option>
-                    <option value="gastric">위암</option>
-                    <option value="liver">간암</option>
-                    <option value="thyroid">갑상선암</option>
-                    <option value="prostate">전립선암</option>
-                    <option value="other">기타</option>
-                  </FilterSelect>
-                </FilterGroup>
-
-                <FilterGroup>
-                  <FilterLabel htmlFor="treatmentStatus">
-                    치료 상태:
-                  </FilterLabel>
-                  <FilterSelect
-                    id="treatmentStatus"
-                    name="treatmentStatus"
-                    value={filters.treatmentStatus}
-                    onChange={handleFilterChange}
-                  >
-                    <option value="all">전체</option>
-                    <option value="ongoing">치료 중</option>
-                    <option value="completed">치료 완료</option>
-                    <option value="recurrence">재발/추가 치료</option>
-                    <option value="maintenance">경과 확인 중</option>
-                  </FilterSelect>
-                </FilterGroup>
-
                 <Link
                   to="/archived"
                   style={{
@@ -2260,19 +2345,81 @@ function DashboardPage() {
                     <HeaderCell>이름</HeaderCell>
                     {useIntegratedMode && <HeaderCell>유형</HeaderCell>}
                     <HeaderCell>생년월일</HeaderCell>
-                    <HeaderCell>암 종류</HeaderCell>
+                    <FilterableHeaderCell
+                      data-role="header-filter-trigger"
+                      ref={(el) => {
+                        if (el) headerFilterRefs.current.set("cancerType", el);
+                        else headerFilterRefs.current.delete("cancerType");
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenHeaderFilter(
+                          openHeaderFilter === "cancerType"
+                            ? null
+                            : "cancerType"
+                        );
+                      }}
+                    >
+                      암 종류
+                    </FilterableHeaderCell>
                     <HeaderCell>진단 시기</HeaderCell>
-                    <HeaderCell>위험도</HeaderCell>
+                    <FilterableHeaderCell
+                      data-role="header-filter-trigger"
+                      ref={(el) => {
+                        if (el) headerFilterRefs.current.set("riskLevel", el);
+                        else headerFilterRefs.current.delete("riskLevel");
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenHeaderFilter(
+                          openHeaderFilter === "riskLevel" ? null : "riskLevel"
+                        );
+                      }}
+                    >
+                      위험도
+                    </FilterableHeaderCell>
                     <HeaderCell>상담 요청</HeaderCell>
                     <HeaderCell>상담 상태</HeaderCell>
-                    <HeaderCell>보관</HeaderCell>
+                    <FilterableHeaderCell
+                      data-role="header-filter-trigger"
+                      ref={(el) => {
+                        if (el)
+                          headerFilterRefs.current.set("treatmentStatus", el);
+                        else headerFilterRefs.current.delete("treatmentStatus");
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenHeaderFilter(
+                          openHeaderFilter === "treatmentStatus"
+                            ? null
+                            : "treatmentStatus"
+                        );
+                      }}
+                    >
+                      치료 상태
+                    </FilterableHeaderCell>
+                    <FilterableHeaderCell
+                      data-role="header-filter-trigger"
+                      ref={(el) => {
+                        if (el) headerFilterRefs.current.set("archived", el);
+                        else headerFilterRefs.current.delete("archived");
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenHeaderFilter(
+                          openHeaderFilter === "archived" ? null : "archived"
+                        );
+                      }}
+                    >
+                      보관
+                    </FilterableHeaderCell>
                   </tr>
                 </TableHeader>
                 <TableBody>
                   {filteredPatients.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={useIntegratedMode ? 10 : 9}
+                        colSpan={useIntegratedMode ? 11 : 10}
                         style={{ textAlign: "center" }}
                       >
                         {loading
@@ -2435,6 +2582,17 @@ function DashboardPage() {
                               </div>
                             )}
                           </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const ct = patient.currentTreatment || "";
+                              if (ct.includes("치료 중")) return "치료 중";
+                              if (ct.includes("치료 완료")) return "치료 완료";
+                              if (ct.includes("재발")) return "재발/추가 치료";
+                              if (ct.includes("경과 확인"))
+                                return "경과 확인 중";
+                              return ct || "정보 없음";
+                            })()}
+                          </TableCell>
                           <TableCell style={{ textAlign: "center" }}>
                             <button
                               onClick={async (e) => {
@@ -2512,6 +2670,72 @@ function DashboardPage() {
                   )}
                 </TableBody>
               </PatientTable>
+
+              {/* HeaderFilterPortal: 헤더 필터 드롭다운 포털 */}
+              {openHeaderFilter && (
+                <HeaderFilterPortal
+                  filterType={openHeaderFilter}
+                  open={!!openHeaderFilter}
+                  anchorEl={headerFilterRefs.current.get(openHeaderFilter)}
+                  options={
+                    openHeaderFilter === "cancerType"
+                      ? [
+                          { value: "all", label: "전체" },
+                          { value: "breast", label: "유방암" },
+                          { value: "colorectal", label: "대장암" },
+                          { value: "lung", label: "폐암" },
+                          { value: "gastric", label: "위암" },
+                          { value: "liver", label: "간암" },
+                          { value: "thyroid", label: "갑상선암" },
+                          { value: "prostate", label: "전립선암" },
+                          { value: "other", label: "기타" },
+                        ]
+                      : openHeaderFilter === "riskLevel"
+                      ? [
+                          { value: "all", label: "전체" },
+                          { value: "high", label: "위험" },
+                          { value: "medium", label: "주의" },
+                          { value: "low", label: "양호" },
+                        ]
+                      : openHeaderFilter === "treatmentStatus"
+                      ? [
+                          { value: "all", label: "전체" },
+                          { value: "ongoing", label: "치료 중" },
+                          { value: "completed", label: "치료 완료" },
+                          { value: "recurrence", label: "재발/추가 치료" },
+                          { value: "maintenance", label: "경과 확인 중" },
+                        ]
+                      : openHeaderFilter === "archived"
+                      ? [
+                          { value: false, label: "보관 제외" },
+                          { value: true, label: "보관 포함" },
+                        ]
+                      : []
+                  }
+                  activeValue={
+                    openHeaderFilter === "cancerType"
+                      ? filters.cancerType
+                      : openHeaderFilter === "riskLevel"
+                      ? filters.riskLevel
+                      : openHeaderFilter === "treatmentStatus"
+                      ? filters.treatmentStatus
+                      : openHeaderFilter === "archived"
+                      ? showArchived
+                      : null
+                  }
+                  onSelect={(value) => {
+                    if (openHeaderFilter === "archived") {
+                      setShowArchived(value);
+                    } else {
+                      handleFilterChange({
+                        target: { name: openHeaderFilter, value },
+                      });
+                    }
+                    setOpenHeaderFilter(null);
+                  }}
+                  onClose={() => setOpenHeaderFilter(null)}
+                />
+              )}
 
               {/* StatusMenuPortal: 상담 상태 드롭다운 포털 */}
               <StatusMenuPortal

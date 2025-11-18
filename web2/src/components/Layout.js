@@ -110,6 +110,22 @@ const NavItem = styled(Link)`
   }
 `;
 
+// 외부 링크용 NavItem (a 태그로 사용)
+const ExternalNavItem = styled.a`
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border-left: 3px solid transparent;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+  }
+`;
+
 // 아이콘 placeholder (실제로는 아이콘 라이브러리 사용 권장)
 const Icon = styled.span`
   margin-right: 0.75rem;
@@ -288,6 +304,16 @@ function Layout({ children, title }) {
             </NavItem>
           </NavGroup>
 
+          <NavGroup>
+            <NavGroupTitle>커뮤니티</NavGroupTitle>
+            <ExternalNavItem
+              href="https://yechan-00.github.io/patient-servey/web4"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Icon>💬</Icon> <MenuText>환자 커뮤니티</MenuText>
+            </ExternalNavItem>
+          </NavGroup>
           <NavGroup>
             <NavGroupTitle>설정</NavGroupTitle>
             <NavItem
