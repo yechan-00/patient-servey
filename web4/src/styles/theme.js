@@ -139,14 +139,14 @@ const theme = {
     desktop: "1280px",
     wide: "1536px",
   },
-  // 카테고리별 색상 매핑
+  // 카테고리별 색상 매핑 (중성톤 + 패스텔)
   categoryColors: {
-    all: { bg: "#e3f2fd", text: "#1565c0", border: "#90caf9" },
-    free: { bg: "#fff3e0", text: "#e65100", border: "#ffb74d" },
-    question: { bg: "#e8f5e9", text: "#2e7d32", border: "#81c784" },
-    review: { bg: "#f3e5f5", text: "#7b1fa2", border: "#ba68c8" },
-    info: { bg: "#e0f2f1", text: "#00695c", border: "#4db6ac" },
-    support: { bg: "#fce4ec", text: "#c2185b", border: "#f48fb1" },
+    all: { bg: "#f1f5f9", text: "#475569", border: "#cbd5e1" },
+    free: { bg: "#fef3c7", text: "#92400e", border: "#fde68a" },
+    question: { bg: "#dbeafe", text: "#1e40af", border: "#93c5fd" },
+    review: { bg: "#f3e8ff", text: "#6b21a8", border: "#c4b5fd" },
+    info: { bg: "#d1fae5", text: "#065f46", border: "#6ee7b7" },
+    support: { bg: "#fee2e2", text: "#991b1b", border: "#fca5a5" },
   },
   // 카테고리별 아이콘
   categoryIcons: {
