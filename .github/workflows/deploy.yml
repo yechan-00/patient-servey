@@ -41,6 +41,22 @@ jobs:
         run: CI=false npm run build
         working-directory: ./web2
 
+      - name: Install web3 dependencies
+        run: npm ci
+        working-directory: ./web3
+
+      - name: Build web3
+        run: CI=false npm run build
+        working-directory: ./web3
+
+      - name: Install web4 dependencies
+        run: npm ci
+        working-directory: ./web4
+
+      - name: Build web4
+        run: CI=false npm run build
+        working-directory: ./web4
+
       - name: Collate build outputs
         run: |
           mkdir -p dist
@@ -62,6 +78,26 @@ jobs:
             cp -r web2/dist dist/web2
           else
             echo "Error: web2 build output directory not found"
+            exit 1
+          fi
+
+          echo "Copying web3 build output..."
+          if [ -d "web3/build" ]; then
+            cp -r web3/build dist/web3
+          elif [ -d "web3/dist" ]; then
+            cp -r web3/dist dist/web3
+          else
+            echo "Error: web3 build output directory not found"
+            exit 1
+          fi
+
+          echo "Copying web4 build output..."
+          if [ -d "web4/build" ]; then
+            cp -r web4/build dist/web4
+          elif [ -d "web4/dist" ]; then
+            cp -r web4/dist dist/web4
+          else
+            echo "Error: web4 build output directory not found"
             exit 1
           fi
 
@@ -87,6 +123,8 @@ jobs:
                 <p>자동으로 Web1으로 이동합니다. 이동하지 않으면 아래 링크를 클릭하세요.</p>
                 <a class="app-link" href="web1/">Web1 앱으로 이동</a>
                 <a class="app-link" href="web2/">Web2 앱으로 이동</a>
+                <a class="app-link" href="web3/">Web3 앱으로 이동</a>
+                <a class="app-link" href="web4/">Web4 앱으로 이동</a>
               </div>
             </body>
           </html>
