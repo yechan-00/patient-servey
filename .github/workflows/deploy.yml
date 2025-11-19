@@ -26,7 +26,12 @@ jobs:
           node-version: 18
 
       - name: Install web1 dependencies
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
         working-directory: ./web1
 
       - name: Build web1
@@ -34,7 +39,12 @@ jobs:
         working-directory: ./web1
 
       - name: Install web2 dependencies
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
         working-directory: ./web2
 
       - name: Build web2
@@ -42,7 +52,12 @@ jobs:
         working-directory: ./web2
 
       - name: Install web3 dependencies
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
         working-directory: ./web3
 
       - name: Build web3
@@ -50,7 +65,12 @@ jobs:
         working-directory: ./web3
 
       - name: Install web4 dependencies
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
         working-directory: ./web4
 
       - name: Build web4
