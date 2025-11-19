@@ -1,7 +1,9 @@
 // src/pages/SignupPage.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 
 const Container = styled.div`
@@ -153,6 +155,10 @@ function SignupPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingNickname, setCheckingNickname] = useState(false);
+  const [nicknameError, setNicknameError] = useState("");
+  const [nicknameAvailable, setNicknameAvailable] = useState(false);
+  const nicknameCheckTimeoutRef = useRef(null);
 
   // 이미 로그인되어 있으면 홈으로 리디렉션
   useEffect(() => {
@@ -161,13 +167,81 @@ function SignupPage() {
     }
   }, [currentUser, navigate]);
 
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (nicknameCheckTimeoutRef.current) {
+        clearTimeout(nicknameCheckTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // 닉네임 중복 체크
+  const checkNicknameAvailability = async (nickname) => {
+    if (!nickname || nickname.trim().length < 2) {
+      setNicknameError("");
+      setNicknameAvailable(false);
+      return false;
+    }
+
+    const trimmedNickname = nickname.trim();
+
+    // 닉네임 길이 체크
+    if (trimmedNickname.length < 2 || trimmedNickname.length > 20) {
+      setNicknameError("닉네임은 2자 이상 20자 이하여야 합니다.");
+      setNicknameAvailable(false);
+      return false;
+    }
+
+    try {
+      setCheckingNickname(true);
+      setNicknameError("");
+
+      // Firestore에서 동일한 닉네임 검색
+      const usersRef = collection(db, "community_users");
+      const q = query(usersRef, where("displayName", "==", trimmedNickname));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        setNicknameError("");
+        setNicknameAvailable(true);
+        return true;
+      } else {
+        setNicknameError("이미 사용 중인 닉네임입니다.");
+        setNicknameAvailable(false);
+        return false;
+      }
+    } catch (error) {
+      console.error("닉네임 중복 체크 오류:", error);
+      setNicknameError("닉네임 확인 중 오류가 발생했습니다.");
+      setNicknameAvailable(false);
+      return false;
+    } finally {
+      setCheckingNickname(false);
+    }
+  };
+
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
     setError("");
     setSuccess("");
+
+    // 닉네임 입력 시 중복 체크 (디바운싱)
+    if (name === "displayName") {
+      // 이전 타이머 취소
+      if (nicknameCheckTimeoutRef.current) {
+        clearTimeout(nicknameCheckTimeoutRef.current);
+      }
+
+      // 500ms 후에 체크
+      nicknameCheckTimeoutRef.current = setTimeout(() => {
+        checkNicknameAvailability(value);
+      }, 500);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -176,6 +250,19 @@ function SignupPage() {
     // 입력 검증
     if (!formData.displayName || !formData.email || !formData.password) {
       return setError("모든 필드를 입력해주세요.");
+    }
+
+    // 닉네임 중복 최종 체크
+    const trimmedNickname = formData.displayName.trim();
+    if (trimmedNickname.length < 2 || trimmedNickname.length > 20) {
+      return setError("닉네임은 2자 이상 20자 이하여야 합니다.");
+    }
+
+    const isAvailable = await checkNicknameAvailability(trimmedNickname);
+    if (!isAvailable) {
+      return setError(
+        "사용할 수 없는 닉네임입니다. 다른 닉네임을 선택해주세요."
+      );
     }
 
     if (formData.password.length < 6) {
@@ -190,7 +277,7 @@ function SignupPage() {
       setError("");
       setSuccess("");
       setLoading(true);
-      await signup(formData.email, formData.password, formData.displayName);
+      await signup(formData.email, formData.password, trimmedNickname);
       setSuccess("회원가입이 완료되었습니다! 로그인 페이지로 이동합니다...");
       setTimeout(() => {
         navigate("/login");
@@ -230,9 +317,33 @@ function SignupPage() {
               name="displayName"
               value={formData.displayName}
               onChange={handleChange}
-              placeholder="닉네임을 입력하세요"
+              placeholder="닉네임을 입력하세요 (2-20자)"
               required
+              maxLength={20}
             />
+            {checkingNickname && (
+              <PasswordHint style={{ color: "#2196f3" }}>
+                닉네임 확인 중...
+              </PasswordHint>
+            )}
+            {nicknameError && (
+              <PasswordHint style={{ color: "#dc3545" }}>
+                {nicknameError}
+              </PasswordHint>
+            )}
+            {nicknameAvailable && formData.displayName.trim().length >= 2 && (
+              <PasswordHint style={{ color: "#28a745" }}>
+                ✓ 사용 가능한 닉네임입니다.
+              </PasswordHint>
+            )}
+            {!checkingNickname &&
+              !nicknameError &&
+              !nicknameAvailable &&
+              formData.displayName.trim().length >= 2 && (
+                <PasswordHint>
+                  닉네임은 2자 이상 20자 이하여야 합니다.
+                </PasswordHint>
+              )}
           </FormGroup>
 
           <FormGroup>

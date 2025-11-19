@@ -1,44 +1,161 @@
 // src/styles/theme.js
 const theme = {
   colors: {
-    primary: "#2a5e8c",
+    // Primary (의료 커뮤니티 특화 - 희망과 치유)
+    primary: {
+      50: "#e8f5e9",
+      100: "#c8e6c9",
+      200: "#a5d6a7",
+      300: "#81c784",
+      400: "#66bb6a",
+      500: "#4caf50", // 메인 그린
+      600: "#43a047",
+      700: "#388e3c",
+      800: "#2e7d32",
+      900: "#1b5e20",
+    },
+    // Secondary (돌봄과 신뢰)
+    secondary: {
+      50: "#e3f2fd",
+      100: "#bbdefb",
+      200: "#90caf9",
+      300: "#64b5f6",
+      400: "#42a5f5",
+      500: "#2196f3", // 메인 블루
+      600: "#1e88e5",
+      700: "#1976d2",
+      800: "#1565c0",
+      900: "#0d47a1",
+    },
+    // Support (지원과 공감)
+    support: {
+      50: "#f3e5f5",
+      100: "#e1bee7",
+      200: "#ce93d8",
+      300: "#ba68c8",
+      400: "#ab47bc",
+      500: "#9c27b0",
+      600: "#8e24aa",
+      700: "#7b1fa2",
+      800: "#6a1b9a",
+      900: "#4a148c",
+    },
+    // Semantic Colors
+    success: "#4caf50",
+    warning: "#ff9800",
+    error: "#f44336",
+    info: "#2196f3",
+    // Neutral
+    neutral: {
+      50: "#fafafa",
+      100: "#f5f5f5",
+      200: "#eeeeee",
+      300: "#e0e0e0",
+      400: "#bdbdbd",
+      500: "#9e9e9e",
+      600: "#757575",
+      700: "#616161",
+      800: "#424242",
+      900: "#212121",
+    },
+    // Legacy (하위 호환성)
     primaryDark: "#1d4269",
     primaryLight: "#3a7eb8",
-    secondary: "#6c757d",
-    success: "#28a745",
-    danger: "#dc3545",
-    warning: "#ffc107",
-    info: "#17a2b8",
     light: "#f8f9fa",
     dark: "#343a40",
     white: "#ffffff",
-    text: "#333333",
-    textSecondary: "#6c757d",
-    border: "#dee2e6",
+    text: "#212121",
+    textSecondary: "#616161",
+    border: "#e0e0e0",
   },
   spacing: {
-    xs: "0.25rem",
-    sm: "0.5rem",
-    md: "1rem",
-    lg: "1.5rem",
-    xl: "2rem",
-    xxl: "3rem",
+    xs: "0.25rem", // 4px
+    sm: "0.5rem", // 8px
+    md: "1rem", // 16px
+    lg: "1.5rem", // 24px
+    xl: "2rem", // 32px
+    xxl: "3rem", // 48px
+    xxxl: "4rem", // 64px
   },
   borderRadius: {
-    sm: "4px",
+    xs: "4px",
+    sm: "6px",
     md: "8px",
     lg: "12px",
+    xl: "16px",
     round: "50%",
   },
   shadows: {
-    sm: "0 2px 4px rgba(0, 0, 0, 0.1)",
+    xs: "0 1px 2px rgba(0, 0, 0, 0.05)",
+    sm: "0 2px 4px rgba(0, 0, 0, 0.08)",
     md: "0 4px 8px rgba(0, 0, 0, 0.1)",
-    lg: "0 8px 16px rgba(0, 0, 0, 0.1)",
+    lg: "0 8px 16px rgba(0, 0, 0, 0.12)",
+    xl: "0 12px 24px rgba(0, 0, 0, 0.15)",
+    // Colored shadows
+    primary: "0 4px 12px rgba(33, 150, 243, 0.2)",
+    success: "0 4px 12px rgba(76, 175, 80, 0.2)",
+    support: "0 4px 12px rgba(156, 39, 176, 0.2)",
+  },
+  typography: {
+    fontFamily: {
+      korean:
+        '-apple-system, "Noto Sans KR", "Apple SD Gothic Neo", sans-serif',
+      english:
+        '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    },
+    fontSize: {
+      xs: "0.75rem", // 12px
+      sm: "0.875rem", // 14px
+      base: "1rem", // 16px
+      lg: "1.125rem", // 18px
+      xl: "1.25rem", // 20px
+      "2xl": "1.5rem", // 24px
+      "3xl": "2rem", // 32px
+      "4xl": "2.5rem", // 40px
+    },
+    fontWeight: {
+      light: 300,
+      normal: 400,
+      medium: 500,
+      semibold: 600,
+      bold: 700,
+      extrabold: 800,
+    },
+    lineHeight: {
+      tight: 1.25,
+      normal: 1.5,
+      relaxed: 1.75,
+    },
+  },
+  transitions: {
+    default: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    fast: "all 0.15s ease-out",
+    slow: "all 0.5s ease-in-out",
+    spring: "all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
   },
   breakpoints: {
     mobile: "768px",
     tablet: "1024px",
     desktop: "1280px",
+    wide: "1536px",
+  },
+  // 카테고리별 색상 매핑
+  categoryColors: {
+    all: { bg: "#e3f2fd", text: "#1565c0", border: "#90caf9" },
+    free: { bg: "#fff3e0", text: "#e65100", border: "#ffb74d" },
+    question: { bg: "#e8f5e9", text: "#2e7d32", border: "#81c784" },
+    review: { bg: "#f3e5f5", text: "#7b1fa2", border: "#ba68c8" },
+    info: { bg: "#e0f2f1", text: "#00695c", border: "#4db6ac" },
+    support: { bg: "#fce4ec", text: "#c2185b", border: "#f48fb1" },
+  },
+  // 카테고리별 아이콘
+  categoryIcons: {
+    all: "📋",
+    free: "💬",
+    question: "❓",
+    review: "⭐",
+    info: "📚",
+    support: "🤝",
   },
 };
 

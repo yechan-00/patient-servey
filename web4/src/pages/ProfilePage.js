@@ -1,8 +1,16 @@
 // src/pages/ProfilePage.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { doc, getDoc, serverTimestamp } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  collection,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { CANCER_TYPES, TREATMENT_STAGES } from "../utils/constants";
@@ -173,6 +181,12 @@ function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [originalDisplayName, setOriginalDisplayName] = useState("");
+  const [lastNicknameChange, setLastNicknameChange] = useState(null);
+  const [checkingNickname, setCheckingNickname] = useState(false);
+  const [nicknameError, setNicknameError] = useState("");
+  const [nicknameAvailable, setNicknameAvailable] = useState(false);
+  const nicknameCheckTimeoutRef = useRef(null);
   const [formData, setFormData] = useState({
     displayName: "",
     cancerType: "",
@@ -195,21 +209,27 @@ function ProfilePage() {
 
         if (userSnap.exists()) {
           const data = userSnap.data();
+          const displayName = data.displayName || "";
           setFormData({
-            displayName: data.displayName || "",
+            displayName: displayName,
             cancerType: data.cancerType || "",
             diagnosisDate: data.diagnosisDate || "",
             treatmentStage: data.treatmentStage || "",
             publicProfile: data.publicProfile || false,
           });
+          setOriginalDisplayName(displayName);
+          setLastNicknameChange(data.lastNicknameChange?.toDate?.() || null);
         } else {
+          const displayName = userProfile?.displayName || "";
           setFormData({
-            displayName: userProfile?.displayName || "",
+            displayName: displayName,
             cancerType: "",
             diagnosisDate: "",
             treatmentStage: "",
             publicProfile: false,
           });
+          setOriginalDisplayName(displayName);
+          setLastNicknameChange(null);
         }
       } catch (error) {
         console.error("프로필 로드 오류:", error);
@@ -222,6 +242,72 @@ function ProfilePage() {
     loadProfile();
   }, [currentUser, navigate, userProfile]);
 
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (nicknameCheckTimeoutRef.current) {
+        clearTimeout(nicknameCheckTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // 닉네임 중복 체크 (자신의 닉네임 제외)
+  const checkNicknameAvailability = async (nickname) => {
+    if (!nickname || nickname.trim().length < 2) {
+      setNicknameError("");
+      setNicknameAvailable(false);
+      return false;
+    }
+
+    const trimmedNickname = nickname.trim();
+
+    // 원래 닉네임과 같으면 체크 불필요
+    if (trimmedNickname === originalDisplayName) {
+      setNicknameError("");
+      setNicknameAvailable(true);
+      return true;
+    }
+
+    // 닉네임 길이 체크
+    if (trimmedNickname.length < 2 || trimmedNickname.length > 20) {
+      setNicknameError("닉네임은 2자 이상 20자 이하여야 합니다.");
+      setNicknameAvailable(false);
+      return false;
+    }
+
+    try {
+      setCheckingNickname(true);
+      setNicknameError("");
+
+      // Firestore에서 동일한 닉네임 검색 (자신 제외)
+      const usersRef = collection(db, "community_users");
+      const q = query(usersRef, where("displayName", "==", trimmedNickname));
+      const querySnapshot = await getDocs(q);
+
+      // 자신의 닉네임이 아니고 다른 사용자가 사용 중인 경우
+      const isUsedByOthers = querySnapshot.docs.some(
+        (doc) => doc.id !== currentUser.uid
+      );
+
+      if (!isUsedByOthers) {
+        setNicknameError("");
+        setNicknameAvailable(true);
+        return true;
+      } else {
+        setNicknameError("이미 사용 중인 닉네임입니다.");
+        setNicknameAvailable(false);
+        return false;
+      }
+    } catch (error) {
+      console.error("닉네임 중복 체크 오류:", error);
+      setNicknameError("닉네임 확인 중 오류가 발생했습니다.");
+      setNicknameAvailable(false);
+      return false;
+    } finally {
+      setCheckingNickname(false);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData({
@@ -230,13 +316,60 @@ function ProfilePage() {
     });
     setError("");
     setSuccess("");
+
+    // 닉네임 입력 시 중복 체크 (디바운싱)
+    if (name === "displayName") {
+      // 이전 타이머 취소
+      if (nicknameCheckTimeoutRef.current) {
+        clearTimeout(nicknameCheckTimeoutRef.current);
+      }
+
+      // 500ms 후에 체크
+      nicknameCheckTimeoutRef.current = setTimeout(() => {
+        checkNicknameAvailability(value);
+      }, 500);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.displayName.trim()) {
+    const trimmedNickname = formData.displayName.trim();
+    if (!trimmedNickname) {
       return setError("닉네임을 입력해주세요.");
+    }
+
+    // 닉네임이 변경된 경우
+    const isNicknameChanged = trimmedNickname !== originalDisplayName;
+
+    if (isNicknameChanged) {
+      // 닉네임 변경 제한 체크 (한 달에 한 번)
+      if (lastNicknameChange) {
+        const now = new Date();
+        const lastChange = new Date(lastNicknameChange);
+        const daysSinceLastChange = Math.floor(
+          (now - lastChange) / (1000 * 60 * 60 * 24)
+        );
+
+        if (daysSinceLastChange < 30) {
+          const remainingDays = 30 - daysSinceLastChange;
+          return setError(
+            `닉네임은 한 달에 한 번만 변경할 수 있습니다. ${remainingDays}일 후에 변경 가능합니다.`
+          );
+        }
+      }
+
+      // 닉네임 중복 최종 체크
+      if (trimmedNickname.length < 2 || trimmedNickname.length > 20) {
+        return setError("닉네임은 2자 이상 20자 이하여야 합니다.");
+      }
+
+      const isAvailable = await checkNicknameAvailability(trimmedNickname);
+      if (!isAvailable) {
+        return setError(
+          "사용할 수 없는 닉네임입니다. 다른 닉네임을 선택해주세요."
+        );
+      }
     }
 
     try {
@@ -244,14 +377,27 @@ function ProfilePage() {
       setSuccess("");
       setSaving(true);
 
-      await updateUserProfile(currentUser.uid, {
-        displayName: formData.displayName.trim(),
+      const updateData = {
+        displayName: trimmedNickname,
         cancerType: formData.cancerType || null,
         diagnosisDate: formData.diagnosisDate || null,
         treatmentStage: formData.treatmentStage || null,
         publicProfile: formData.publicProfile,
         updatedAt: serverTimestamp(),
-      });
+      };
+
+      // 닉네임이 변경된 경우 lastNicknameChange 업데이트
+      if (isNicknameChanged) {
+        updateData.lastNicknameChange = serverTimestamp();
+      }
+
+      await updateUserProfile(currentUser.uid, updateData);
+
+      // 로컬 상태 업데이트
+      setOriginalDisplayName(trimmedNickname);
+      if (isNicknameChanged) {
+        setLastNicknameChange(new Date());
+      }
 
       setSuccess("프로필이 업데이트되었습니다.");
     } catch (error) {
@@ -285,11 +431,39 @@ function ProfilePage() {
             name="displayName"
             value={formData.displayName}
             onChange={handleChange}
-            placeholder="닉네임을 입력하세요"
+            placeholder="닉네임을 입력하세요 (2-20자)"
             required
             maxLength={20}
           />
-          <HelpText>커뮤니티에서 표시될 이름입니다.</HelpText>
+          {checkingNickname && (
+            <HelpText style={{ color: "#2196f3" }}>닉네임 확인 중...</HelpText>
+          )}
+          {nicknameError && (
+            <HelpText style={{ color: "#dc3545" }}>{nicknameError}</HelpText>
+          )}
+          {nicknameAvailable &&
+            formData.displayName.trim() !== originalDisplayName &&
+            formData.displayName.trim().length >= 2 && (
+              <HelpText style={{ color: "#28a745" }}>
+                ✓ 사용 가능한 닉네임입니다.
+              </HelpText>
+            )}
+          {!checkingNickname &&
+            !nicknameError &&
+            formData.displayName.trim().length >= 2 && (
+              <HelpText>
+                커뮤니티에서 표시될 이름입니다.
+                {formData.displayName.trim() !== originalDisplayName &&
+                  lastNicknameChange && (
+                    <>
+                      <br />
+                      <span style={{ color: "#ff9800" }}>
+                        ⚠️ 닉네임은 한 달에 한 번만 변경할 수 있습니다.
+                      </span>
+                    </>
+                  )}
+              </HelpText>
+            )}
         </FormGroup>
 
         <FormGroup>

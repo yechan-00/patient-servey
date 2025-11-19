@@ -14,6 +14,7 @@ import { useAuth } from "../contexts/AuthContext";
 import MedicalStaffBadge from "../components/MedicalStaffBadge";
 import { CATEGORIES, CANCER_TYPES, CATEGORY_LABELS } from "../utils/constants";
 import { formatDate } from "../utils/helpers";
+import theme from "../styles/theme";
 
 // 설문 배너 스타일
 const SurveyBanner = styled.div`
@@ -382,14 +383,21 @@ const CategoryLink = styled.button`
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.5rem;
   line-height: 1.4;
   letter-spacing: -0.01em;
+
+  span:first-child {
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+  }
 
   &:hover {
     background-color: ${(props) => (props.active ? "#bbdefb" : "#f5f5f5")};
     color: ${(props) => (props.active ? "#1565c0" : "#1976d2")};
     font-weight: 600;
+    transform: translateX(2px);
   }
 `;
 
@@ -690,259 +698,169 @@ const SortButton = styled.button`
   }
 `;
 
-const PostTable = styled.table`
+// 카드 기반 게시글 목록 컨테이너
+const PostListContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background-color: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e9ecef;
 
   @media (max-width: 768px) {
+    gap: 0.75rem;
+  }
+`;
+
+// 게시글 카드 (Reddit 스타일)
+const PostCard = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #42a5f5 0%, #1976d2 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  &:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+    border-color: #42a5f5;
+
+    &::before {
+      opacity: 1;
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 1.25rem;
     border-radius: 10px;
-    overflow-x: auto;
-    display: block;
   }
 
   @media (max-width: 480px) {
+    padding: 1rem;
     border-radius: 8px;
   }
 `;
 
-const TableHeader = styled.thead`
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-  border-bottom: 3px solid #90caf9;
-`;
-
-const TableHeaderRow = styled.tr``;
-
-const TableHeaderCell = styled.th`
-  padding: 1.125rem 0.875rem;
-  text-align: left;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #1565c0;
-  border-bottom: 3px solid #90caf9;
-  letter-spacing: -0.01em;
-  position: relative;
-
-  &:first-child {
-    width: 60px;
-    text-align: center;
-  }
-
-  &:nth-child(2) {
-    min-width: 100px;
-  }
-
-  &:nth-child(3) {
-    min-width: 300px;
-  }
-
-  &:nth-child(4) {
-    min-width: 100px;
-  }
-
-  &:nth-child(5) {
-    min-width: 100px;
-  }
-
-  &:nth-child(6),
-  &:nth-child(7),
-  &:nth-child(8) {
-    min-width: 70px;
-    text-align: center;
-  }
-
-  &::after {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      #90caf9 50%,
-      transparent 100%
-    );
-  }
-`;
-
-const TableBody = styled.tbody``;
-
-const TableRow = styled.tr`
-  border-bottom: 1px solid #e9ecef;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background-color: white;
-
-  &:hover {
-    background-color: #f0f7ff;
-    transform: translateX(2px);
-    box-shadow: -2px 0 8px rgba(25, 118, 210, 0.1);
-    border-left: 3px solid #42a5f5;
-  }
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:not(:last-child) {
-    border-bottom: 1px solid #e9ecef;
-  }
-`;
-
-const TableCell = styled.td`
-  padding: 1.125rem 0.875rem;
-  font-size: 0.875rem;
-  color: #495057;
-  vertical-align: middle;
-  line-height: 1.5;
-  transition: color 0.2s ease;
-
-  &:first-child {
-    text-align: center;
-    color: #6c757d;
-    font-weight: 600;
-    font-size: 0.85rem;
-    width: 60px;
-  }
-
-  &:nth-child(2) {
-    min-width: 100px;
-  }
-
-  &:nth-child(3) {
-    font-weight: 600;
-    min-width: 300px;
-  }
-
-  &:nth-child(4) {
-    color: #6c757d;
-    font-size: 0.85rem;
-    min-width: 100px;
-  }
-
-  &:nth-child(5) {
-    color: #6c757d;
-    font-size: 0.85rem;
-    min-width: 100px;
-  }
-
-  &:nth-child(6),
-  &:nth-child(7),
-  &:nth-child(8) {
-    text-align: center;
-    color: #6c757d;
-    font-weight: 600;
-    font-size: 0.85rem;
-    min-width: 70px;
-  }
-
-  @media (max-width: 768px) {
-    padding: 0.875rem 0.625rem;
-    font-size: 0.8rem;
-
-    &:first-child {
-      font-size: 0.75rem;
-      width: 50px;
-    }
-
-    &:nth-child(3) {
-      min-width: 200px;
-    }
-
-    &:nth-child(4),
-    &:nth-child(5) {
-      font-size: 0.75rem;
-      min-width: 80px;
-    }
-
-    &:nth-child(6),
-    &:nth-child(7),
-    &:nth-child(8) {
-      font-size: 0.75rem;
-      min-width: 60px;
-    }
-  }
-
-  @media (max-width: 480px) {
-    padding: 0.75rem 0.5rem;
-    font-size: 0.75rem;
-
-    &:first-child {
-      font-size: 0.7rem;
-      width: 40px;
-    }
-
-    &:nth-child(3) {
-      min-width: 150px;
-    }
-
-    &:nth-child(4),
-    &:nth-child(5) {
-      font-size: 0.7rem;
-      min-width: 70px;
-    }
-
-    &:nth-child(6),
-    &:nth-child(7),
-    &:nth-child(8) {
-      font-size: 0.7rem;
-      min-width: 50px;
-    }
-  }
-`;
-
-const PostTitleLink = styled.div`
-  color: #212121;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
+// 카드 헤더 (카테고리)
+const CardHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  line-height: 1.5;
-  transition: all 0.2s ease;
-
-  &:hover {
-    color: #1976d2;
-    text-decoration: underline;
-    transform: translateX(2px);
-  }
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
 `;
 
-const CategoryTag = styled.span`
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-  color: #1565c0;
-  padding: 0.35rem 0.7rem;
-  border-radius: 6px;
+// 카테고리 배지 (아이콘 포함)
+const CategoryBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: ${(props) => props.bgColor || "#e3f2fd"};
+  color: ${(props) => props.textColor || "#1565c0"};
+  padding: 0.4rem 0.85rem;
+  border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
-  border: 1px solid #90caf9;
+  border: 1px solid ${(props) => props.borderColor || "#90caf9"};
   letter-spacing: -0.01em;
-  display: inline-block;
   transition: all 0.2s ease;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(21, 101, 192, 0.2);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   }
 `;
 
-const AuthorCell = styled.div`
+// 카드 제목
+const CardTitle = styled.h3`
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #212121;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  transition: color 0.2s ease;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+
+  ${PostCard}:hover & {
+    color: #1976d2;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 0.95rem;
+  }
+`;
+
+// 카드 메타 정보 (작성자, 날짜)
+const CardMeta = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #495057;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+  color: #616161;
 `;
+
+const AuthorInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+`;
+
+const DateInfo = styled.span`
+  color: #9e9e9e;
+  font-size: 0.85rem;
+`;
+
+// 카드 푸터 (통계 정보)
+const CardFooter = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f0f0f0;
+  flex-wrap: wrap;
+`;
+
+const StatItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  color: #616161;
+  font-weight: 500;
+
+  &::before {
+    content: "${(props) => props.icon || ""}";
+    font-size: 1rem;
+  }
+`;
+
+// 사용하지 않는 테이블 스타일 컴포넌트 제거됨 (카드 레이아웃으로 전환)
 
 const RightSidebar = styled.aside`
   width: 300px;
@@ -1633,7 +1551,8 @@ function CommunityPage() {
                 active={selectedCategory === "all"}
                 onClick={() => navigate("/")}
               >
-                전체글
+                <span>{theme.categoryIcons.all}</span>
+                <span>전체글</span>
               </CategoryLink>
             </CategoryItem>
             {CATEGORIES.filter((c) => c.id !== "all").map((category) => (
@@ -1642,7 +1561,8 @@ function CommunityPage() {
                   active={selectedCategory === category.id}
                   onClick={() => navigate(`/community/${category.id}`)}
                 >
-                  {category.name}
+                  <span>{theme.categoryIcons[category.id] || "📋"}</span>
+                  <span>{category.name}</span>
                 </CategoryLink>
               </CategoryItem>
             ))}
@@ -1673,7 +1593,7 @@ function CommunityPage() {
             <SurveyCard onClick={() => handleSurveyClick("survivor")}>
               <SurveyIcon>📋</SurveyIcon>
               <SurveyInfo>
-                <SurveyCardTitle>생존자 설문</SurveyCardTitle>
+                <SurveyCardTitle>암 생존자를 위한 건강관리</SurveyCardTitle>
                 <SurveyCardDescription>
                   치료를 완료한 암 생존자분들의 건강 상태와 삶의 질을 파악하기
                   위한 설문입니다
@@ -1683,10 +1603,10 @@ function CommunityPage() {
             <SurveyCard onClick={() => handleSurveyClick("patient")}>
               <SurveyIcon>🏥</SurveyIcon>
               <SurveyInfo>
-                <SurveyCardTitle>환자 설문</SurveyCardTitle>
+                <SurveyCardTitle>암 환자의 사회적 욕구</SurveyCardTitle>
                 <SurveyCardDescription>
-                  현재 암 치료를 받고 계신 환자분들의 증상, 치료 경험,
-                  일상생활을 조사하는 설문입니다
+                  현재 암 치료를 받고 계신 환자분들의 증상, 치료 경험, 일상생활
+                  등 전반적인 사회적 욕구를 조사하는 설문입니다
                 </SurveyCardDescription>
               </SurveyInfo>
             </SurveyCard>
@@ -1767,48 +1687,51 @@ function CommunityPage() {
           </EmptyState>
         ) : (
           <>
-            <PostTable>
-              <TableHeader>
-                <TableHeaderRow>
-                  <TableHeaderCell>번호</TableHeaderCell>
-                  <TableHeaderCell>게시판</TableHeaderCell>
-                  <TableHeaderCell>제목</TableHeaderCell>
-                  <TableHeaderCell>글쓴이</TableHeaderCell>
-                  <TableHeaderCell>등록일</TableHeaderCell>
-                  <TableHeaderCell>조회</TableHeaderCell>
-                  <TableHeaderCell>좋아요</TableHeaderCell>
-                  <TableHeaderCell>댓글</TableHeaderCell>
-                </TableHeaderRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPosts.map((post, index) => (
-                  <TableRow
+            <PostListContainer>
+              {filteredPosts.map((post) => {
+                const categoryColors =
+                  theme.categoryColors[post.category] ||
+                  theme.categoryColors.all;
+                const categoryIcon =
+                  theme.categoryIcons[post.category] || theme.categoryIcons.all;
+
+                return (
+                  <PostCard
                     key={post.id}
                     onClick={() => handlePostClick(post.id)}
                   >
-                    <TableCell>{filteredPosts.length - index}</TableCell>
-                    <TableCell>
-                      <CategoryTag>
-                        {CATEGORY_LABELS[post.category] || post.category}
-                      </CategoryTag>
-                    </TableCell>
-                    <TableCell>
-                      <PostTitleLink>{post.title}</PostTitleLink>
-                    </TableCell>
-                    <TableCell>
-                      <AuthorCell>
+                    <CardHeader>
+                      <CategoryBadge
+                        bgColor={categoryColors.bg}
+                        textColor={categoryColors.text}
+                        borderColor={categoryColors.border}
+                      >
+                        <span>{categoryIcon}</span>
+                        <span>
+                          {CATEGORY_LABELS[post.category] || post.category}
+                        </span>
+                      </CategoryBadge>
+                    </CardHeader>
+
+                    <CardTitle>{post.title}</CardTitle>
+
+                    <CardMeta>
+                      <AuthorInfo>
                         {post.authorName || "익명"}
                         {post.authorIsMedicalStaff && <MedicalStaffBadge />}
-                      </AuthorCell>
-                    </TableCell>
-                    <TableCell>{formatDate(post.createdAt)}</TableCell>
-                    <TableCell>{post.viewCount || 0}</TableCell>
-                    <TableCell>{post.likeCount || 0}</TableCell>
-                    <TableCell>{post.commentCount || 0}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </PostTable>
+                      </AuthorInfo>
+                      <DateInfo>{formatDate(post.createdAt)}</DateInfo>
+                    </CardMeta>
+
+                    <CardFooter>
+                      <StatItem icon="👁️">{post.viewCount || 0}</StatItem>
+                      <StatItem icon="❤️">{post.likeCount || 0}</StatItem>
+                      <StatItem icon="💬">{post.commentCount || 0}</StatItem>
+                    </CardFooter>
+                  </PostCard>
+                );
+              })}
+            </PostListContainer>
             <PageInfo>
               <span>전체 {filteredPosts.length}개</span>
               <span>1 페이지</span>
