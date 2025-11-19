@@ -1507,11 +1507,7 @@ function CommunityPage() {
   };
 
   useEffect(() => {
-    if (!currentUser) {
-      navigate("/login");
-      return;
-    }
-
+    // 게시글 로드 (로그인 없이도 가능)
     const postsRef = collection(db, "community_posts");
     let q;
 
@@ -1663,6 +1659,12 @@ function CommunityPage() {
   };
 
   const handleWritePost = () => {
+    // 로그인 체크
+    if (!currentUser) {
+      const currentPath = window.location.pathname + window.location.search;
+      navigate(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      return;
+    }
     navigate("/community/write");
   };
 

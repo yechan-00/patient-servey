@@ -74,14 +74,12 @@ function App() {
               }
             />
 
-            {/* 보호된 경로 */}
+            {/* 공개 경로 - 커뮤니티 (읽기) */}
             <Route
               path="/"
               element={
                 <Layout>
-                  <PrivateRoute>
-                    <CommunityPage />
-                  </PrivateRoute>
+                  <CommunityPage />
                 </Layout>
               }
             />
@@ -89,9 +87,7 @@ function App() {
               path="/community"
               element={
                 <Layout>
-                  <PrivateRoute>
-                    <CommunityPage />
-                  </PrivateRoute>
+                  <CommunityPage />
                 </Layout>
               }
             />
@@ -99,19 +95,7 @@ function App() {
               path="/community/:category"
               element={
                 <Layout>
-                  <PrivateRoute>
-                    <CommunityPage />
-                  </PrivateRoute>
-                </Layout>
-              }
-            />
-            <Route
-              path="/community/write"
-              element={
-                <Layout>
-                  <PrivateRoute>
-                    <WritePostPage />
-                  </PrivateRoute>
+                  <CommunityPage />
                 </Layout>
               }
             />
@@ -119,8 +103,18 @@ function App() {
               path="/community/post/:postId"
               element={
                 <Layout>
+                  <PostDetailPage />
+                </Layout>
+              }
+            />
+
+            {/* 보호된 경로 - 글쓰기 */}
+            <Route
+              path="/community/write"
+              element={
+                <Layout>
                   <PrivateRoute>
-                    <PostDetailPage />
+                    <WritePostPage />
                   </PrivateRoute>
                 </Layout>
               }

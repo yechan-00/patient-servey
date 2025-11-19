@@ -1171,12 +1171,7 @@ function PostDetailPage() {
   const menuDropdownRef = useRef(null);
 
   useEffect(() => {
-    if (!currentUser) {
-      navigate("/login");
-      return;
-    }
-
-    // 게시글 로드
+    // 게시글 로드 (로그인 없이도 가능)
     const loadPost = async () => {
       try {
         const postDoc = await getDoc(doc(db, "community_posts", postId));
@@ -1278,7 +1273,7 @@ function PostDetailPage() {
     );
 
     return () => unsubscribeComments();
-  }, [postId, currentUser, navigate]);
+  }, [postId, currentUser]);
 
   // 드롭다운 메뉴 외부 클릭 감지
   useEffect(() => {
@@ -1304,6 +1299,13 @@ function PostDetailPage() {
 
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
+
+    // 로그인 체크
+    if (!currentUser) {
+      const currentPath = `/community/post/${postId}`;
+      navigate(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      return;
+    }
 
     if (!commentText.trim()) {
       return setError("댓글을 입력해주세요.");
@@ -1550,6 +1552,12 @@ function PostDetailPage() {
   };
 
   const handleReply = (commentId) => {
+    // 로그인 체크
+    if (!currentUser) {
+      const currentPath = `/community/post/${postId}`;
+      navigate(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      return;
+    }
     setReplyingTo(commentId);
     setReplyText("");
   };
@@ -1560,13 +1568,15 @@ function PostDetailPage() {
   };
 
   const handleSubmitReply = async (commentId) => {
-    if (!replyText.trim()) {
-      return setError("답글을 입력해주세요.");
+    // 로그인 체크
+    if (!currentUser) {
+      const currentPath = `/community/post/${postId}`;
+      navigate(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      return;
     }
 
-    if (!currentUser) {
-      setError("로그인이 필요합니다.");
-      return;
+    if (!replyText.trim()) {
+      return setError("답글을 입력해주세요.");
     }
 
     try {
@@ -1744,7 +1754,8 @@ function PostDetailPage() {
 
   const handleBookmark = async () => {
     if (!currentUser) {
-      setError("로그인이 필요합니다.");
+      const currentPath = `/community/post/${postId}`;
+      navigate(`/login?redirect=${encodeURIComponent(currentPath)}`);
       return;
     }
 
@@ -1881,7 +1892,8 @@ function PostDetailPage() {
 
   const handleLikePost = async () => {
     if (!currentUser) {
-      setError("로그인이 필요합니다.");
+      const currentPath = `/community/post/${postId}`;
+      navigate(`/login?redirect=${encodeURIComponent(currentPath)}`);
       return;
     }
 

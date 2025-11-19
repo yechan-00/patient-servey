@@ -1,6 +1,6 @@
 // src/pages/LoginPage.js
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -153,18 +153,20 @@ const Divider = styled.div`
 function LoginPage() {
   const { login, currentUser } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // 이미 로그인되어 있으면 홈으로 리디렉션
+  // 이미 로그인되어 있으면 redirect URL 또는 홈으로 리디렉션
   useEffect(() => {
     if (currentUser) {
-      navigate("/");
+      const redirect = searchParams.get("redirect") || "/";
+      navigate(redirect);
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, navigate, searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -178,7 +180,10 @@ function LoginPage() {
       setError("");
       setLoading(true);
       await login(email, password);
-      navigate("/");
+
+      // 로그인 성공 후 redirect URL로 이동
+      const redirect = searchParams.get("redirect") || "/";
+      navigate(redirect);
     } catch (error) {
       console.error("로그인 오류:", error);
 
