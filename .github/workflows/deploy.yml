@@ -23,15 +23,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Install web1 dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm install --legacy-peer-deps
         working-directory: ./web1
 
       - name: Build web1
@@ -39,12 +34,7 @@ jobs:
         working-directory: ./web1
 
       - name: Install web2 dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm install --legacy-peer-deps
         working-directory: ./web2
 
       - name: Build web2
@@ -52,12 +42,7 @@ jobs:
         working-directory: ./web2
 
       - name: Install web3 dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm install --legacy-peer-deps
         working-directory: ./web3
 
       - name: Build web3
@@ -65,12 +50,7 @@ jobs:
         working-directory: ./web3
 
       - name: Install web4 dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm install --legacy-peer-deps
         working-directory: ./web4
 
       - name: Build web4
