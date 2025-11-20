@@ -142,7 +142,8 @@ function Layout({ children }) {
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate("/login");
+      // 로그아웃 후 현재 페이지에 그대로 유지 (커뮤니티 화면)
+      // navigate를 호출하지 않으면 현재 페이지에 그대로 남음
     } catch (error) {
       console.error("로그아웃 오류:", error);
     }
