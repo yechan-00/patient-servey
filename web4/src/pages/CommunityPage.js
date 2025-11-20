@@ -12,11 +12,16 @@ import {
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import MedicalStaffBadge from "../components/MedicalStaffBadge";
-import { CATEGORIES, CANCER_TYPES, CATEGORY_LABELS } from "../utils/constants";
+import {
+  CATEGORIES,
+  CANCER_TYPES,
+  CATEGORY_LABELS,
+  CANCER_TYPE_LABELS,
+} from "../utils/constants";
 import { formatRelativeTime } from "../utils/helpers";
 import theme from "../styles/theme";
 
-// 설문 배너 스타일 - 축소 및 톤다운
+// 설문 배너 스타일 - 축소 및 톤다운 (overflow 제거로 잘림 방지)
 const SurveyBanner = styled.div`
   background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #dbeafe 100%);
   border-radius: 8px;
@@ -25,7 +30,7 @@ const SurveyBanner = styled.div`
   box-shadow: 0 1px 3px rgba(2, 132, 199, 0.1);
   border: 1px solid #bae6fd;
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* hidden → visible로 변경하여 잘림 방지 */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   &::before {
@@ -168,7 +173,8 @@ const SurveyCard = styled.button`
   align-items: flex-start;
   gap: 1.25rem;
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* hidden → visible로 변경하여 hover 시 그림자/테두리가 잘리지 않도록 */
+  width: 100%; /* 전체 영역 클릭 가능 */
 
   &::before {
     content: "";
@@ -254,7 +260,7 @@ const SurveyCardDescription = styled.p`
 `;
 
 const Container = styled.div`
-  max-width: 1400px;
+  max-width: 1100px; /* 1400px → 1100px로 조정 (요구사항: 960-1100px) */
   margin: 0 auto;
   padding: 1.5rem;
   display: flex;
@@ -441,13 +447,14 @@ const CommunitySubtitle = styled.p`
   font-family: ${theme.typography.fontFamily.korean};
 `;
 
-// Primary Button (가장 중요한 액션)
+// Primary Button (가장 중요한 액션) - 버튼 크기 조정 (높이 36px, 폰트 14px)
 const WriteButton = styled.button`
   background: #2563eb;
   color: white;
   border: none;
   border-radius: 8px;
-  padding: 0.75rem 1.5rem;
+  padding: 0.625rem 1.25rem; /* 0.75rem → 0.625rem (36px 높이) */
+  height: 36px; /* 명시적 높이 설정 */
   font-size: 0.875rem; // 14px - Body
   font-weight: 600;
   cursor: pointer;
@@ -455,6 +462,9 @@ const WriteButton = styled.button`
   white-space: nowrap;
   box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
   font-family: ${theme.typography.fontFamily.korean};
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     background: #1d4ed8;
@@ -559,6 +569,7 @@ const SearchButton = styled.button`
   color: white;
   border: none;
   border-radius: 8px;
+  height: 36px; /* 명시적 높이 설정 */
   font-size: 0.875rem; // 14px - Body
   font-weight: 500;
   cursor: pointer;
@@ -567,6 +578,7 @@ const SearchButton = styled.button`
   box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   letter-spacing: -0.01em;
   font-family: ${theme.typography.fontFamily.korean};
@@ -921,9 +933,10 @@ const AppInstallSection = styled.div`
 
 const AppInstallText = styled.p`
   font-size: 0.8125rem;
-  color: #64748b;
+  color: #475569; /* #64748b → #475569 (SupportCenterText와 통일) */
   margin: 0 0 0.875rem 0;
   line-height: 1.5;
+  text-align: center; /* SupportCenterText와 동일하게 중앙 정렬 */
   font-family: ${theme.typography.fontFamily.korean};
 `;
 
@@ -934,12 +947,16 @@ const AppDownloadButton = styled.button`
   color: white;
   border: none;
   border-radius: 6px;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  height: 36px; /* 명시적 높이 설정 */
+  font-size: 0.875rem; /* 0.8125rem → 0.875rem (14px)로 통일 */
+  font-weight: 600; /* 500 → 600으로 통일 */
   cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.2);
+  box-shadow: 0 2px 4px rgba(2, 132, 199, 0.2); /* SupportCenterButton과 동일 */
   font-family: ${theme.typography.fontFamily.korean};
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     background: #0369a1;
@@ -970,11 +987,12 @@ const SupportCenterText = styled.p`
 
 const SupportCenterButton = styled.button`
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.625rem 1rem; /* 0.75rem → 0.625rem (36px 높이) */
   background: #0284c7;
   color: white;
   border: none;
   border-radius: 6px;
+  height: 36px; /* 명시적 높이 설정 */
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
@@ -1313,14 +1331,274 @@ const SearchResults = styled.div`
 
 const PageInfo = styled.div`
   display: flex;
-  justify-content: space-between;
+  justify-content: center; /* space-between → center로 변경 (중앙 정렬) */
   align-items: center;
+  gap: 1rem; /* 항목 간 간격 추가 */
   margin-top: 1.5rem;
-  padding-top: 1.25rem;
+  margin-bottom: 1.5rem; /* 하단 여백 추가 */
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
   border-top: 2px solid #e9ecef;
   color: #6c757d;
   font-size: 0.875rem;
   font-weight: 500;
+`;
+
+// 필터 배지 컨테이너
+const FilterBadgeContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+`;
+
+// 필터 배지
+const FilterBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: 1px solid #bae6fd;
+`;
+
+// 필터 초기화 버튼
+const FilterResetButton = styled.button`
+  padding: 0.375rem 0.75rem;
+  background-color: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: auto;
+
+  &:hover {
+    background-color: #e2e8f0;
+    color: #475569;
+    border-color: #cbd5e0;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2);
+  }
+`;
+
+// 베스트 게시물 섹션
+const BestPostsSection = styled.div`
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+`;
+
+const BestPostsTitle = styled.h2`
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: ${theme.typography.fontFamily.korean};
+
+  &::before {
+    content: "🔥";
+    font-size: 1.5rem;
+  }
+`;
+
+const BestPostsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+`;
+
+const BestPostCard = styled.div`
+  padding: 1rem;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: #f0f9ff;
+    border-color: #0284c7;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.1);
+    transform: translateY(-2px);
+  }
+`;
+
+const BestPostCategory = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+`;
+
+const BestPostTitle = styled.h3`
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-family: ${theme.typography.fontFamily.korean};
+`;
+
+const BestPostMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.5rem;
+`;
+
+const BestPostStats = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #dc2626;
+  font-weight: 500;
+`;
+
+// 암 관련 정보 섹션
+const CancerInfoSection = styled.div`
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+`;
+
+const CancerInfoTitle = styled.h2`
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 1.25rem 0;
+  font-family: ${theme.typography.fontFamily.korean};
+`;
+
+const CancerInfoGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+`;
+
+const CancerInfoCard = styled.div`
+  padding: 1.25rem;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 8px;
+  border: 1px solid #bae6fd;
+  transition: all 0.15s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
+    border-color: #0284c7;
+  }
+`;
+
+const CancerInfoCardTitle = styled.h3`
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0369a1;
+  margin: 0 0 0.5rem 0;
+  font-family: ${theme.typography.fontFamily.korean};
+`;
+
+const CancerInfoCardText = styled.p`
+  font-size: 0.875rem;
+  color: #475569;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.6;
+  font-family: ${theme.typography.fontFamily.korean};
+`;
+
+const CancerInfoCardButton = styled.button`
+  padding: 0.5rem 1rem;
+  background: #0284c7;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: #0369a1;
+  }
+`;
+
+// 검색 대상 드롭다운
+const SearchTypeSelect = styled.select`
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background-color: white;
+  color: #1f2937;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: ${theme.typography.fontFamily.korean};
+
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+`;
+
+// 기간 필터 컨테이너
+const DateFilterContainer = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+`;
+
+const DateInput = styled.input`
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background-color: white;
+  color: #1f2937;
+  transition: all 0.15s ease;
+  font-family: ${theme.typography.fontFamily.korean};
+
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
 `;
 
 // 공지사항 모달 스타일
@@ -1346,6 +1624,37 @@ const ModalContent = styled.div`
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  position: relative; /* X 버튼 위치 지정을 위해 */
+`;
+
+// 모달 닫기 X 버튼
+const ModalCloseX = styled.button`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  z-index: 10;
+
+  &:hover {
+    background: #f3f4f6;
+    color: #1f2937;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  }
 `;
 
 const ModalTitle = styled.h2`
@@ -1431,6 +1740,10 @@ function CommunityPage() {
   const [selectedRegion, setSelectedRegion] = useState("all");
   const [selectedSupportCancerType, setSelectedSupportCancerType] =
     useState("all");
+  const [bestPosts, setBestPosts] = useState([]);
+  const [searchType, setSearchType] = useState("all"); // 제목, 내용, 제목+내용, 작성자
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   // URL 파라미터에서 카테고리 읽기
   useEffect(() => {
@@ -1560,6 +1873,27 @@ function CommunityPage() {
     return () => unsubscribe();
   }, [currentUser, navigate, selectedCategory]);
 
+  // 베스트 게시물 로드 (최근 7일 좋아요 상위 5개)
+  useEffect(() => {
+    if (selectedCategory !== "all") return; // 베스트는 전체글에서만 표시
+
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const filtered = posts.filter((post) => {
+      const postDate = post.createdAt?.toDate
+        ? post.createdAt.toDate()
+        : new Date(0);
+      return postDate >= sevenDaysAgo;
+    });
+
+    const sorted = [...filtered]
+      .sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0))
+      .slice(0, 5);
+
+    setBestPosts(sorted);
+  }, [posts, selectedCategory]);
+
   // 검색 및 정렬 필터링
   useEffect(() => {
     let filtered = [...posts];
@@ -1576,15 +1910,45 @@ function CommunityPage() {
       );
     }
 
-    // 검색 필터링
+    // 검색 필터링 (검색 대상에 따라)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(
-        (post) =>
-          post.title?.toLowerCase().includes(query) ||
-          post.content?.toLowerCase().includes(query) ||
-          post.authorName?.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter((post) => {
+        switch (searchType) {
+          case "title":
+            return post.title?.toLowerCase().includes(query);
+          case "content":
+            return post.content?.toLowerCase().includes(query);
+          case "titleContent":
+            return (
+              post.title?.toLowerCase().includes(query) ||
+              post.content?.toLowerCase().includes(query)
+            );
+          case "author":
+            return post.authorName?.toLowerCase().includes(query);
+          case "all":
+          default:
+            return (
+              post.title?.toLowerCase().includes(query) ||
+              post.content?.toLowerCase().includes(query) ||
+              post.authorName?.toLowerCase().includes(query)
+            );
+        }
+      });
+    }
+
+    // 기간 필터링
+    if (startDate || endDate) {
+      filtered = filtered.filter((post) => {
+        const postDate = post.createdAt?.toDate
+          ? post.createdAt.toDate()
+          : new Date(0);
+        const postDateStr = postDate.toISOString().split("T")[0];
+
+        if (startDate && postDateStr < startDate) return false;
+        if (endDate && postDateStr > endDate) return false;
+        return true;
+      });
     }
 
     // "내가 쓴 글" 필터는 먼저 적용
@@ -1652,6 +2016,9 @@ function CommunityPage() {
     selectedCategory,
     selectedCancerType,
     currentUser,
+    searchType,
+    startDate,
+    endDate,
   ]);
 
   const handlePostClick = (postId) => {
@@ -1674,6 +2041,19 @@ function CommunityPage() {
 
   const handleClearSearch = () => {
     setSearchQuery("");
+    setSearchType("all");
+    setStartDate("");
+    setEndDate("");
+  };
+
+  const handleFilterReset = () => {
+    setSelectedCategory("all");
+    setSelectedCancerType("all");
+    setSearchQuery("");
+    setSearchType("all");
+    setStartDate("");
+    setEndDate("");
+    navigate("/");
   };
 
   const handleSortChange = (sortType) => {
@@ -1689,6 +2069,23 @@ function CommunityPage() {
     setShowNoticeModal(false);
     setSelectedNotice(null);
   };
+
+  // Esc 키로 모달 닫기
+  useEffect(() => {
+    const handleEscKey = (e) => {
+      if (e.key === "Escape") {
+        if (showNoticeModal) {
+          handleCloseNoticeModal();
+        }
+        if (showSupportCenterModal) {
+          handleCloseSupportCenterModal();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleEscKey);
+    return () => window.removeEventListener("keydown", handleEscKey);
+  }, [showNoticeModal, showSupportCenterModal]);
 
   const handleSupportCenterClick = () => {
     setShowSupportCenterModal(true);
@@ -2128,20 +2525,172 @@ function CommunityPage() {
           <WriteButton onClick={handleWritePost}>글쓰기</WriteButton>
         </Header>
 
+        {/* 필터 배지 및 초기화 버튼 */}
+        {(selectedCategory !== "all" ||
+          selectedCancerType !== "all" ||
+          searchQuery.trim() ||
+          startDate ||
+          endDate) && (
+          <FilterBadgeContainer>
+            {selectedCategory !== "all" && (
+              <FilterBadge>
+                카테고리: {CATEGORY_LABELS[selectedCategory]}
+              </FilterBadge>
+            )}
+            {selectedCancerType !== "all" && (
+              <FilterBadge>
+                암 종류: {CANCER_TYPE_LABELS[selectedCancerType] || "기타"}
+              </FilterBadge>
+            )}
+            {searchQuery.trim() && (
+              <FilterBadge>검색: {searchQuery}</FilterBadge>
+            )}
+            {(startDate || endDate) && (
+              <FilterBadge>
+                기간: {startDate || "전체"} ~ {endDate || "전체"}
+              </FilterBadge>
+            )}
+            <FilterResetButton onClick={handleFilterReset}>
+              필터 전체 해제
+            </FilterResetButton>
+          </FilterBadgeContainer>
+        )}
+
+        {/* 베스트 게시물 섹션 (전체글에서만 표시) */}
+        {selectedCategory === "all" &&
+          bestPosts.length > 0 &&
+          !searchQuery.trim() &&
+          selectedCancerType === "all" && (
+            <BestPostsSection>
+              <BestPostsTitle>베스트 게시글</BestPostsTitle>
+              <BestPostsGrid>
+                {bestPosts.map((post) => {
+                  const categoryColors =
+                    theme.categoryColors[post.category] ||
+                    theme.categoryColors.all;
+                  const categoryIcon =
+                    theme.categoryIcons[post.category] ||
+                    theme.categoryIcons.all;
+
+                  return (
+                    <BestPostCard
+                      key={post.id}
+                      onClick={() => handlePostClick(post.id)}
+                    >
+                      <BestPostCategory
+                        style={{
+                          backgroundColor: categoryColors.bg,
+                          color: categoryColors.text,
+                        }}
+                      >
+                        <span>{categoryIcon}</span>
+                        <span>
+                          {CATEGORY_LABELS[post.category] || post.category}
+                        </span>
+                      </BestPostCategory>
+                      <BestPostTitle>{post.title}</BestPostTitle>
+                      <BestPostMeta>
+                        <span>{post.authorName || "익명"}</span>
+                        <span>·</span>
+                        <span>{formatRelativeTime(post.createdAt)}</span>
+                      </BestPostMeta>
+                      <BestPostStats>
+                        <span>❤️ {post.likeCount || 0}</span>
+                      </BestPostStats>
+                    </BestPostCard>
+                  );
+                })}
+              </BestPostsGrid>
+            </BestPostsSection>
+          )}
+
+        {/* 암 관련 정보 섹션 (전체글에서만 표시) */}
+        {selectedCategory === "all" &&
+          !searchQuery.trim() &&
+          selectedCancerType === "all" &&
+          bestPosts.length === 0 && (
+            <CancerInfoSection>
+              <CancerInfoTitle>암 관련 정보</CancerInfoTitle>
+              <CancerInfoGrid>
+                <CancerInfoCard>
+                  <CancerInfoCardTitle>암이란?</CancerInfoCardTitle>
+                  <CancerInfoCardText>
+                    암은 우리 몸의 정상 세포가 비정상적으로 변하여 무한히
+                    증식하고 주변 조직을 침범하는 질환입니다. 조기 발견과 치료가
+                    중요합니다.
+                  </CancerInfoCardText>
+                  <CancerInfoCardButton>자세히 보기</CancerInfoCardButton>
+                </CancerInfoCard>
+                <CancerInfoCard>
+                  <CancerInfoCardTitle>
+                    암 환자 치료 과정 한눈에 보기
+                  </CancerInfoCardTitle>
+                  <CancerInfoCardText>
+                    진단부터 치료 완료까지의 전 과정을 단계별로 안내합니다.
+                    수술, 항암치료, 방사선치료 등 각 치료 방법의 특징을
+                    이해하세요.
+                  </CancerInfoCardText>
+                  <CancerInfoCardButton>자세히 보기</CancerInfoCardButton>
+                </CancerInfoCard>
+                <CancerInfoCard>
+                  <CancerInfoCardTitle>
+                    암 환자를 위한 생활 팁
+                  </CancerInfoCardTitle>
+                  <CancerInfoCardText>
+                    치료 중과 회복 기간 동안의 영양 관리, 운동, 일상생활
+                    가이드라인을 제공합니다. 건강한 생활 습관이 회복에 도움이
+                    됩니다.
+                  </CancerInfoCardText>
+                  <CancerInfoCardButton>자세히 보기</CancerInfoCardButton>
+                </CancerInfoCard>
+              </CancerInfoGrid>
+            </CancerInfoSection>
+          )}
+
         <SearchContainer>
           <form
             onSubmit={handleSearch}
-            style={{ flex: 1, display: "flex", gap: "0.5rem" }}
+            style={{ flex: 1, display: "flex", gap: "0.5rem", flexWrap: "wrap" }}
           >
-            <SearchInputWrapper>
+            {/* 검색 대상 드롭다운 */}
+            <SearchTypeSelect
+              value={searchType}
+              onChange={(e) => setSearchType(e.target.value)}
+            >
+              <option value="all">전체</option>
+              <option value="title">제목</option>
+              <option value="content">내용</option>
+              <option value="titleContent">제목+내용</option>
+              <option value="author">작성자</option>
+            </SearchTypeSelect>
+
+            <SearchInputWrapper style={{ flex: 1, minWidth: "200px" }}>
               <SearchIcon>🔍</SearchIcon>
               <SearchInput
                 type="text"
-                placeholder="제목, 내용, 작성자로 검색..."
+                placeholder="검색어를 입력하세요..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </SearchInputWrapper>
+
+            {/* 기간 필터 */}
+            <DateFilterContainer>
+              <DateInput
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                placeholder="시작일"
+              />
+              <span>~</span>
+              <DateInput
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                placeholder="종료일"
+              />
+            </DateFilterContainer>
+
             {searchQuery && (
               <ClearButton type="button" onClick={handleClearSearch}>
                 ✕
@@ -2387,6 +2936,9 @@ function CommunityPage() {
       {showNoticeModal && selectedNotice && noticeContents[selectedNotice] && (
         <ModalOverlay onClick={handleCloseNoticeModal}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalCloseX onClick={handleCloseNoticeModal} title="닫기">
+              ×
+            </ModalCloseX>
             <ModalTitle>{noticeContents[selectedNotice].title}</ModalTitle>
             <ModalBody>{noticeContents[selectedNotice].content}</ModalBody>
             <ModalCloseButton onClick={handleCloseNoticeModal}>
@@ -2399,6 +2951,9 @@ function CommunityPage() {
       {showSupportCenterModal && (
         <ModalOverlay onClick={handleCloseSupportCenterModal}>
           <SupportModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalCloseX onClick={handleCloseSupportCenterModal} title="닫기">
+              ×
+            </ModalCloseX>
             <ModalTitle>🏥 지원 센터 찾기</ModalTitle>
             <ModalBody>
               <SupportFilterSection>

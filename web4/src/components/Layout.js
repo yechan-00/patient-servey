@@ -1,5 +1,5 @@
 // src/components/Layout.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { useAuth } from "../contexts/AuthContext";
@@ -79,11 +79,83 @@ const UserMenu = styled.div`
   display: flex;
   align-items: center;
   gap: 1rem;
+  position: relative; /* 드롭다운 메뉴 위치 지정 */
 `;
 
-const UserName = styled.span`
+const UserName = styled.button`
   color: white;
   font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+  }
+`;
+
+// 드롭다운 메뉴
+const UserDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 180px;
+  z-index: 1000;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+`;
+
+const DropdownItem = styled.button`
+  width: 100%;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #1f2937;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &:hover {
+    background-color: #f9fafb;
+    color: #0284c7;
+  }
+
+  &:focus {
+    outline: none;
+    background-color: #f3f4f6;
+  }
+
+  &:first-child {
+    border-top: none;
+  }
+
+  &:last-child {
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 0.5rem;
+  }
+`;
+
+const DropdownDivider = styled.div`
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 0.25rem 0;
 `;
 
 const Button = styled.button`
@@ -112,6 +184,8 @@ function Layout({ children }) {
   const { currentUser, userProfile, signOut } = useAuth();
   const navigate = useNavigate();
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     if (!currentUser) {
@@ -142,12 +216,30 @@ function Layout({ children }) {
   const handleSignOut = async () => {
     try {
       await signOut();
+      setShowUserDropdown(false);
       // 로그아웃 후 현재 페이지에 그대로 유지 (커뮤니티 화면)
       // navigate를 호출하지 않으면 현재 페이지에 그대로 남음
     } catch (error) {
       console.error("로그아웃 오류:", error);
     }
   };
+
+  // 드롭다운 메뉴 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowUserDropdown(false);
+      }
+    };
+
+    if (showUserDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showUserDropdown]);
 
   return (
     <Container>
@@ -175,16 +267,42 @@ function Layout({ children }) {
               </>
             )}
             {currentUser ? (
-              <UserMenu>
-                <NavLink to="/profile" style={{ fontSize: "0.9rem" }}>
-                  <UserName>
-                    {userProfile?.displayName ||
-                      currentUser.displayName ||
-                      "사용자"}
-                    님
-                  </UserName>
-                </NavLink>
-                <Button onClick={handleSignOut}>로그아웃</Button>
+              <UserMenu ref={dropdownRef}>
+                <UserName
+                  onClick={() => setShowUserDropdown(!showUserDropdown)}
+                >
+                  {userProfile?.displayName ||
+                    currentUser.displayName ||
+                    "사용자"}
+                  님
+                </UserName>
+                {showUserDropdown && (
+                  <UserDropdown>
+                    <DropdownItem
+                      onClick={() => {
+                        navigate("/survey-history");
+                        setShowUserDropdown(false);
+                      }}
+                    >
+                      내 설문 이력
+                    </DropdownItem>
+                    <DropdownItem
+                      onClick={() => {
+                        navigate("/bookmarks");
+                        setShowUserDropdown(false);
+                      }}
+                    >
+                      북마크
+                    </DropdownItem>
+                    <DropdownDivider />
+                    <DropdownItem
+                      onClick={handleSignOut}
+                      style={{ color: "#dc2626" }}
+                    >
+                      로그아웃
+                    </DropdownItem>
+                  </UserDropdown>
+                )}
               </UserMenu>
             ) : (
               <UserMenu>

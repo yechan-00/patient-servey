@@ -348,14 +348,14 @@ const CategoryBadge = styled.span`
   opacity: 0.8; // 약간 투명하게
 `;
 
-// 본문: 널찍하게 (플랫하게)
+// 본문: 널찍하게 (플랫하게) - 좌우 패딩 추가
 const PostContent = styled.div`
   color: #111827;
   line-height: 1.7;
   white-space: pre-wrap;
   margin-top: 0;
   margin-bottom: ${SPACING.xl};
-  padding: ${SPACING.xl} 0; // 상하 패딩만
+  padding: ${SPACING.xl} ${SPACING.xxl}; /* 상하 32px, 좌우 40px (24-32px 요구사항 반영) */
   font-size: 16px; // 15px → 16px
   max-width: 100%;
   word-break: break-word;
