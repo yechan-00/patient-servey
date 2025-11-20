@@ -33,18 +33,6 @@ const SurveyBanner = styled.div`
   overflow: visible; /* hidden → visible로 변경하여 잘림 방지 */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 5px;
-    background: linear-gradient(90deg, #42a5f5 0%, #1976d2 50%, #42a5f5 100%);
-    background-size: 200% 100%;
-    animation: shimmer 3s ease-in-out infinite;
-  }
-
   &::after {
     content: "";
     position: absolute;
@@ -58,16 +46,6 @@ const SurveyBanner = styled.div`
       transparent 70%
     );
     pointer-events: none;
-  }
-
-  @keyframes shimmer {
-    0%,
-    100% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
   }
 
   @media (max-width: 768px) {
@@ -177,29 +155,12 @@ const SurveyCard = styled.button`
   overflow: visible; /* hidden → visible로 변경하여 hover 시 그림자/테두리가 잘리지 않도록 */
   width: 100%; /* 전체 영역 클릭 가능 */
 
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: linear-gradient(180deg, #42a5f5 0%, #1976d2 100%);
-    transform: scaleY(0);
-    transition: transform 0.3s ease;
-    transform-origin: top;
-  }
-
   &:hover {
     border-color: #42a5f5;
     background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
     transform: translateY(-4px) scale(1.02);
     box-shadow: 0 8px 24px rgba(66, 165, 245, 0.25),
       0 4px 12px rgba(66, 165, 245, 0.15);
-
-    &::before {
-      transform: scaleY(1);
-    }
   }
 
   &:active {
@@ -1442,21 +1403,16 @@ const FilterResetButton = styled.button`
   }
 `;
 
-// 베스트 게시물 섹션
+// 베스트 게시물 섹션 - 일반 게시글 목록과 동일한 스타일
 const BestPostsSection = styled.div`
-  margin-bottom: 2rem;
-  padding: 1.5rem;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e9ecef;
+  margin-bottom: 1.5rem;
 `;
 
 const BestPostsTitle = styled.h2`
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 600;
   color: #0f172a;
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.75rem 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1464,74 +1420,8 @@ const BestPostsTitle = styled.h2`
 
   &::before {
     content: "🔥";
-    font-size: 1.5rem;
+    font-size: 1.125rem;
   }
-`;
-
-const BestPostsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
-`;
-
-const BestPostCard = styled.div`
-  padding: 1rem;
-  background-color: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  &:hover {
-    background-color: #f0f9ff;
-    border-color: #0284c7;
-    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.1);
-    transform: translateY(-2px);
-  }
-`;
-
-const BestPostCategory = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.5rem;
-  background-color: #e0f2fe;
-  color: #0369a1;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-`;
-
-const BestPostTitle = styled.h3`
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: #0f172a;
-  margin: 0 0 0.5rem 0;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  font-family: ${theme.typography.fontFamily.korean};
-`;
-
-const BestPostMeta = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.75rem;
-  color: #64748b;
-  margin-top: 0.5rem;
-`;
-
-const BestPostStats = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: #dc2626;
-  font-weight: 500;
 `;
 
 // 암 관련 정보 섹션
@@ -2700,44 +2590,83 @@ function CommunityPage() {
           selectedCancerType === "all" && (
             <BestPostsSection>
               <BestPostsTitle>베스트 게시글</BestPostsTitle>
-              <BestPostsGrid>
-                {bestPosts.map((post) => {
-                  const categoryColors =
-                    theme.categoryColors[post.category] ||
-                    theme.categoryColors.all;
-                  const categoryIcon =
-                    theme.categoryIcons[post.category] ||
-                    theme.categoryIcons.all;
+              <PostListContainer>
+                <PostTable>
+                  <TableHeader>
+                    <TableHeaderRow>
+                      <TableHeaderCell>카테고리</TableHeaderCell>
+                      <TableHeaderCell>제목</TableHeaderCell>
+                      <TableHeaderCell>작성자</TableHeaderCell>
+                      <TableHeaderCell>날짜</TableHeaderCell>
+                      <TableHeaderCell>조회</TableHeaderCell>
+                      <TableHeaderCell>좋아요</TableHeaderCell>
+                      <TableHeaderCell>댓글</TableHeaderCell>
+                    </TableHeaderRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bestPosts.map((post) => {
+                      const categoryColors =
+                        theme.categoryColors[post.category] ||
+                        theme.categoryColors.all;
+                      const categoryIcon =
+                        theme.categoryIcons[post.category] ||
+                        theme.categoryIcons.all;
 
-                  return (
-                    <BestPostCard
-                      key={post.id}
-                      onClick={() => handlePostClick(post.id)}
-                    >
-                      <BestPostCategory
-                        style={{
-                          backgroundColor: categoryColors.bg,
-                          color: categoryColors.text,
-                        }}
-                      >
-                        <span>{categoryIcon}</span>
-                        <span>
-                          {CATEGORY_LABELS[post.category] || post.category}
-                        </span>
-                      </BestPostCategory>
-                      <BestPostTitle>{post.title}</BestPostTitle>
-                      <BestPostMeta>
-                        <span>{post.authorName || "익명"}</span>
-                        <span>·</span>
-                        <span>{formatRelativeTime(post.createdAt)}</span>
-                      </BestPostMeta>
-                      <BestPostStats>
-                        <span>❤️ {post.likeCount || 0}</span>
-                      </BestPostStats>
-                    </BestPostCard>
-                  );
-                })}
-              </BestPostsGrid>
+                      return (
+                        <TableRow
+                          key={post.id}
+                          onClick={() => handlePostClick(post.id)}
+                        >
+                          <TableCell>
+                            <CategoryBadge
+                              bgColor={categoryColors.bg}
+                              textColor={categoryColors.text}
+                              borderColor={categoryColors.border}
+                            >
+                              <span>{categoryIcon}</span>
+                              <span>
+                                {CATEGORY_LABELS[post.category] ||
+                                  post.category}
+                              </span>
+                            </CategoryBadge>
+                          </TableCell>
+                          <TableCell>
+                            <PostTitleLink>{post.title}</PostTitleLink>
+                          </TableCell>
+                          <TableCell>
+                            <AuthorCell>
+                              {post.authorName || "익명"}
+                              {post.authorIsMedicalStaff && (
+                                <MedicalStaffBadge />
+                              )}
+                            </AuthorCell>
+                          </TableCell>
+                          <TableCell>
+                            <DateCell>
+                              {formatRelativeTime(post.createdAt)}
+                            </DateCell>
+                          </TableCell>
+                          <TableCell>
+                            <StatCell type="views">
+                              {post.viewCount || 0}
+                            </StatCell>
+                          </TableCell>
+                          <TableCell>
+                            <StatCell type="likes">
+                              {post.likeCount || 0}
+                            </StatCell>
+                          </TableCell>
+                          <TableCell>
+                            <StatCell type="comments">
+                              {post.commentCount || 0}
+                            </StatCell>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </PostTable>
+              </PostListContainer>
             </BestPostsSection>
           )}
 

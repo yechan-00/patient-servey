@@ -360,7 +360,7 @@ function Layout({ children }) {
     return () => unsubscribe();
   }, [currentUser]);
 
-  // 오래된 읽은 알림 자동 삭제 (90일 이상)
+  // 오래된 알림 자동 삭제 (90일 이상 - 읽은/읽지 않은 모두)
   const cleanupOldNotifications = useCallback(async () => {
     if (!currentUser) return;
 
@@ -369,11 +369,8 @@ function Layout({ children }) {
       cutoffDate.setDate(cutoffDate.getDate() - 90); // 90일 전
 
       const notificationsRef = collection(db, "community_notifications");
-      const q = query(
-        notificationsRef,
-        where("userId", "==", currentUser.uid),
-        where("read", "==", true)
-      );
+      // 읽은/읽지 않은 구분 없이 모든 알림 조회
+      const q = query(notificationsRef, where("userId", "==", currentUser.uid));
 
       const snapshot = await getDocs(q);
       const batch = writeBatch(db);
@@ -381,22 +378,14 @@ function Layout({ children }) {
 
       snapshot.docs.forEach((docSnapshot) => {
         const data = docSnapshot.data();
-        const readAt = data.readAt;
+        const createdAt = data.createdAt;
 
-        // readAt이 있고 90일 이상 지난 경우 삭제
-        if (readAt) {
-          const readAtDate = readAt.toDate ? readAt.toDate() : new Date(readAt);
-          if (readAtDate < cutoffDate) {
-            batch.delete(docSnapshot.ref);
-            deletedCount++;
-          }
-        }
-        // readAt이 없지만 createdAt이 90일 이상 지난 경우도 삭제 (안전장치)
-        else if (data.createdAt) {
-          const createdAt = data.createdAt.toDate
-            ? data.createdAt.toDate()
-            : new Date(data.createdAt);
-          if (createdAt < cutoffDate) {
+        // createdAt 기준으로 90일 이상 지난 알림 삭제 (읽은/읽지 않은 모두)
+        if (createdAt) {
+          const createdAtDate = createdAt.toDate
+            ? createdAt.toDate()
+            : new Date(createdAt);
+          if (createdAtDate < cutoffDate) {
             batch.delete(docSnapshot.ref);
             deletedCount++;
           }
