@@ -247,12 +247,9 @@ function Layout({ children }) {
         <NavContent>
           <Logo to="/">암 환자 커뮤니티</Logo>
           <NavLinks>
-            <NavLink to="/">커뮤니티</NavLink>
             <NavLink to="/surveys">설문</NavLink>
             {currentUser && (
               <>
-                <NavLink to="/survey-history">내 설문 이력</NavLink>
-                <NavLink to="/bookmarks">북마크</NavLink>
                 <NavLink to="/notifications">
                   알림
                   {unreadNotificationCount > 0 && (

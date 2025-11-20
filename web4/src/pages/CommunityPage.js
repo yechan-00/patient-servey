@@ -1345,17 +1345,49 @@ const SearchResults = styled.div`
 
 const PageInfo = styled.div`
   display: flex;
-  justify-content: center; /* space-between → center로 변경 (중앙 정렬) */
+  justify-content: center;
   align-items: center;
-  gap: 1rem; /* 항목 간 간격 추가 */
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem; /* 하단 여백 추가 */
-  padding-top: 1.5rem;
-  padding-bottom: 1.5rem;
-  border-top: 2px solid #e9ecef;
-  color: #6c757d;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  padding: 1rem 0;
+`;
+
+const PaginationButton = styled.button`
+  min-width: 36px;
+  height: 36px;
+  padding: 0 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: ${(props) => (props.active ? "#2563eb" : "white")};
+  color: ${(props) => (props.active ? "white" : "#374151")};
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: ${(props) => (props.active ? "600" : "400")};
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover:not(:disabled) {
+    background-color: ${(props) => (props.active ? "#1d4ed8" : "#f9fafb")};
+    border-color: ${(props) => (props.active ? "#1d4ed8" : "#d1d5db")};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const PaginationEllipsis = styled.span`
+  min-width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-size: 0.875rem;
 `;
 
 // 필터 배지 컨테이너
@@ -1800,6 +1832,8 @@ function CommunityPage() {
   const [searchType, setSearchType] = useState("all"); // 제목, 내용, 제목+내용, 작성자
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const postsPerPage = 20; // 페이지당 게시글 수
 
   // URL 파라미터에서 카테고리 읽기
   useEffect(() => {
@@ -2065,6 +2099,7 @@ function CommunityPage() {
     });
 
     setFilteredPosts(filtered);
+    setCurrentPage(1); // 필터 변경 시 첫 페이지로 리셋
   }, [
     posts,
     searchQuery,
@@ -2076,6 +2111,52 @@ function CommunityPage() {
     startDate,
     endDate,
   ]);
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
+  const startIndex = (currentPage - 1) * postsPerPage;
+  const endIndex = startIndex + postsPerPage;
+  const paginatedPosts = filteredPosts.slice(startIndex, endIndex);
+
+  // 페이지네이션 번호 생성
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 9; // 최대 표시할 페이지 수
+
+    if (totalPages <= maxVisible) {
+      // 전체 페이지가 9개 이하면 모두 표시
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // 현재 페이지 주변에 페이지 번호 표시
+      if (currentPage <= 5) {
+        // 앞부분
+        for (let i = 1; i <= 9; i++) {
+          pages.push(i);
+        }
+        pages.push("ellipsis");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 4) {
+        // 뒷부분
+        pages.push(1);
+        pages.push("ellipsis");
+        for (let i = totalPages - 8; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        // 중간
+        pages.push(1);
+        pages.push("ellipsis");
+        for (let i = currentPage - 3; i <= currentPage + 3; i++) {
+          pages.push(i);
+        }
+        pages.push("ellipsis");
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
 
   const handlePostClick = (postId) => {
     navigate(`/community/post/${postId}`);
@@ -2867,7 +2948,7 @@ function CommunityPage() {
                   </TableHeaderRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPosts.map((post) => {
+                  {paginatedPosts.map((post) => {
                     const categoryColors =
                       theme.categoryColors[post.category] ||
                       theme.categoryColors.all;
@@ -2923,14 +3004,46 @@ function CommunityPage() {
                         </TableCell>
                       </TableRow>
                     );
-                  })}
+                      })}
                 </TableBody>
               </PostTable>
             </PostListContainer>
-            <PageInfo>
-              <span>전체 {filteredPosts.length}개</span>
-              <span>1 페이지</span>
-            </PageInfo>
+            {totalPages > 1 && (
+              <PageInfo>
+                <PaginationButton
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  &lt;
+                </PaginationButton>
+                {getPageNumbers().map((page, index) => {
+                  if (page === "ellipsis") {
+                    return (
+                      <PaginationEllipsis key={`ellipsis-${index}`}>
+                        ...
+                      </PaginationEllipsis>
+                    );
+                  }
+                  return (
+                    <PaginationButton
+                      key={page}
+                      active={currentPage === page}
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </PaginationButton>
+                  );
+                })}
+                <PaginationButton
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  &gt;
+                </PaginationButton>
+              </PageInfo>
+            )}
           </>
         )}
       </MainContent>

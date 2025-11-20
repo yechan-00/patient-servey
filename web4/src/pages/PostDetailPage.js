@@ -280,7 +280,7 @@ const PostCard = styled.div`
 // 헤더: 제목 중심 구조 (플랫하게)
 const PostHeader = styled.div`
   margin-bottom: ${SPACING.lg};
-  padding: ${SPACING.xl} 0; // 상하 패딩만
+  padding: ${SPACING.lg} 0; // 상하 패딩 축소 (xl → lg)
 `;
 
 // 메타 정보 행: 작고 옅게 (시각 우선순위 낮춤)
@@ -304,7 +304,8 @@ const MetaDivider = styled.span`
 const PostTitle = styled.h1`
   font-size: 2rem; // 28px → 32px로 증가
   color: ${COLORS.textPrimary};
-  margin: 0 0 16px 0; // 아래 16px
+  margin: 0 0 12px 0; // 아래 여백 축소 (16px → 12px)
+  padding: 0; // 좌우 패딩 제거
   font-weight: 700;
   line-height: 1.3;
   letter-spacing: -0.02em;
@@ -675,23 +676,21 @@ const CommentList = styled.div`
 
 // 댓글 카드: 플랫하게 (카드 느낌 제거)
 const CommentCard = styled.div`
-  padding: ${SPACING.md} 0; // 좌우 패딩 제거
-  background-color: transparent; // 배경 제거
-  border-radius: 0; // 둥글게 제거
-  border-left: none; // 왼쪽 테두리 제거
-  border-bottom: 1px solid #f1f5f9; // 아래 얇은 구분선만
-  margin-bottom: ${SPACING.md};
-  padding-bottom: ${SPACING.md};
+  padding: ${SPACING.sm} 0; // md → sm으로 축소
+  background-color: #fafbfc; // 배경색 추가로 구별 쉽게
+  border-radius: 6px; // 둥글게
+  border: 1px solid #e5e7eb; // 테두리 추가
+  margin-bottom: ${SPACING.sm}; // md → sm으로 축소
+  padding: ${SPACING.sm} ${SPACING.md}; // 좌우 패딩 추가
   transition: all 0.2s ease;
 
   &:hover {
-    background-color: transparent;
+    background-color: #f8f9fa;
+    border-color: #d1d5db;
   }
 
   &:last-child {
-    border-bottom: none;
     margin-bottom: 0;
-    padding-bottom: 0;
   }
 `;
 
@@ -760,13 +759,13 @@ const BannerText = styled.p`
 
 // 답글 카드: depth 구조 지원
 const ReplyCard = styled.div`
-  padding: ${SPACING.md};
-  background-color: white;
-  border-radius: 10px;
-  border-left: 3px solid ${COLORS.secondary};
-  margin-left: ${SPACING.xl}; // 32px 들여쓰기
-  margin-top: ${SPACING.sm};
-  box-shadow: 0 1px 4px rgba(58, 116, 184, 0.05);
+  padding: ${SPACING.sm} ${SPACING.md}; // 상하 패딩 축소
+  background-color: #f9fafb; // 배경색 변경
+  border-radius: 6px; // 10px → 6px로 축소
+  border-left: 2px solid ${COLORS.secondary}; // 3px → 2px로 축소
+  margin-left: ${SPACING.lg}; // xl → lg로 축소 (24px)
+  margin-top: ${SPACING.xs}; // sm → xs로 축소
+  box-shadow: 0 1px 2px rgba(58, 116, 184, 0.05); // 그림자 축소
 `;
 
 const ReplyForm = styled.form`
@@ -799,9 +798,9 @@ const SmallButton = styled.button`
   background-color: transparent;
   border: none;
   color: #6c757d;
-  font-size: 0.85rem;
+  font-size: 0.75rem; // 0.85rem → 0.75rem으로 축소
   cursor: pointer;
-  padding: 0.25rem 0.5rem;
+  padding: 0.125rem 0.375rem; // 0.25rem 0.5rem → 0.125rem 0.375rem으로 축소
   border-radius: 4px;
   transition: all 0.3s ease;
 
