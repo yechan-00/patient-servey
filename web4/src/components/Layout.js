@@ -1,5 +1,5 @@
 // src/components/Layout.js
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { useAuth } from "../contexts/AuthContext";
@@ -13,6 +13,7 @@ import {
   doc,
   writeBatch,
   serverTimestamp,
+  getDocs,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { formatRelativeTime } from "../utils/helpers";
@@ -359,6 +360,58 @@ function Layout({ children }) {
     return () => unsubscribe();
   }, [currentUser]);
 
+  // 오래된 읽은 알림 자동 삭제 (90일 이상)
+  const cleanupOldNotifications = useCallback(async () => {
+    if (!currentUser) return;
+
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - 90); // 90일 전
+
+      const notificationsRef = collection(db, "community_notifications");
+      const q = query(
+        notificationsRef,
+        where("userId", "==", currentUser.uid),
+        where("read", "==", true)
+      );
+
+      const snapshot = await getDocs(q);
+      const batch = writeBatch(db);
+      let deletedCount = 0;
+
+      snapshot.docs.forEach((docSnapshot) => {
+        const data = docSnapshot.data();
+        const readAt = data.readAt;
+
+        // readAt이 있고 90일 이상 지난 경우 삭제
+        if (readAt) {
+          const readAtDate = readAt.toDate ? readAt.toDate() : new Date(readAt);
+          if (readAtDate < cutoffDate) {
+            batch.delete(docSnapshot.ref);
+            deletedCount++;
+          }
+        }
+        // readAt이 없지만 createdAt이 90일 이상 지난 경우도 삭제 (안전장치)
+        else if (data.createdAt) {
+          const createdAt = data.createdAt.toDate
+            ? data.createdAt.toDate()
+            : new Date(data.createdAt);
+          if (createdAt < cutoffDate) {
+            batch.delete(docSnapshot.ref);
+            deletedCount++;
+          }
+        }
+      });
+
+      if (deletedCount > 0) {
+        await batch.commit();
+        console.log(`${deletedCount}개의 오래된 알림이 삭제되었습니다.`);
+      }
+    } catch (error) {
+      console.error("오래된 알림 삭제 오류:", error);
+    }
+  }, [currentUser]);
+
   // 알림 목록 가져오기 (드롭다운용)
   useEffect(() => {
     if (!currentUser || !showNotificationDropdown) {
@@ -374,12 +427,17 @@ function Layout({ children }) {
 
     const unsubscribe = onSnapshot(
       q,
-      (snapshot) => {
+      async (snapshot) => {
         const notificationsData = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
         setNotifications(notificationsData);
+
+        // 알림 목록을 불러올 때마다 오래된 알림 정리 (최초 1회만 실행)
+        if (notificationsData.length > 0) {
+          await cleanupOldNotifications();
+        }
       },
       (error) => {
         console.error("알림 목록 로드 오류:", error);
@@ -387,7 +445,7 @@ function Layout({ children }) {
     );
 
     return () => unsubscribe();
-  }, [currentUser, showNotificationDropdown]);
+  }, [currentUser, showNotificationDropdown, cleanupOldNotifications]);
 
   const handleSignOut = async () => {
     try {
