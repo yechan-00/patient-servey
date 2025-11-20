@@ -146,7 +146,8 @@ const SurveyCards = styled.div`
   z-index: 1;
   opacity: ${(props) => (props.expanded ? "1" : "0")};
   max-height: ${(props) => (props.expanded ? "1000px" : "0")};
-  overflow: hidden;
+  overflow: visible; /* hidden → visible로 변경하여 hover 효과가 잘리지 않도록 */
+  padding: 0.5rem; /* 그림자가 잘리지 않도록 패딩 추가 */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   @media (max-width: 768px) {
@@ -260,9 +261,9 @@ const SurveyCardDescription = styled.p`
 `;
 
 const Container = styled.div`
-  max-width: 1100px; /* 1400px → 1100px로 조정 (요구사항: 960-1100px) */
+  max-width: 1400px; /* 콘텐츠 영역을 넓게 확장 */
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 1.5rem 2rem; /* 좌우 여백 축소 */
   display: flex;
   gap: 1.25rem;
   background-color: #f8fafc;
@@ -405,6 +406,7 @@ const MainContent = styled.main`
   flex: 1;
   min-width: 0;
   background-color: transparent;
+  overflow: visible; /* SurveyCard hover 효과가 잘리지 않도록 */
 `;
 
 const Header = styled.div`
@@ -484,32 +486,44 @@ const WriteButton = styled.button`
 `;
 
 const SearchContainer = styled.div`
-  margin-bottom: 1rem;
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
+  margin-bottom: 1.5rem;
   background-color: white;
-  padding: 0.875rem 1rem;
-  border-radius: 6px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #e5e7eb;
-  transition: all 0.15s ease;
-
-  &:focus-within {
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    border-color: #2563eb;
-  }
 
   @media (max-width: 768px) {
-    padding: 1rem;
-    gap: 0.5rem;
+    padding: 0.875rem;
     margin-bottom: 1rem;
   }
 
   @media (max-width: 480px) {
     padding: 0.75rem;
-    gap: 0.5rem;
     margin-bottom: 0.75rem;
+  }
+`;
+
+const SearchForm = styled.form`
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    gap: 0.5rem;
+  }
+`;
+
+const SearchRow = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex: 1;
+  min-width: 300px;
+
+  @media (max-width: 768px) {
+    min-width: 100%;
     flex-direction: column;
     align-items: stretch;
   }
@@ -1561,14 +1575,27 @@ const CancerInfoCardButton = styled.button`
 // 검색 대상 드롭다운
 const SearchTypeSelect = styled.select`
   padding: 0.625rem 0.875rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 0.875rem;
-  background-color: white;
-  color: #1f2937;
+  background-color: #f9fafb;
+  color: #374151;
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: ${theme.typography.fontFamily.korean};
+  min-width: 100px;
+
+  &:hover {
+    border-color: #9ca3af;
+    background-color: white;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    background-color: white;
+  }
 
   &:focus {
     outline: none;
@@ -1582,13 +1609,42 @@ const DateFilterContainer = styled.div`
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  padding: 0.5rem;
+  background-color: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  span {
+    color: #6b7280;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
 `;
 
 const DateInput = styled.input`
-  padding: 0.625rem 0.875rem;
-  border: 1px solid #e5e7eb;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 0.875rem;
+  background-color: white;
+  color: #374151;
+  transition: all 0.15s ease;
+  font-family: ${theme.typography.fontFamily.korean};
+
+  &:hover {
+    border-color: #9ca3af;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
   background-color: white;
   color: #1f2937;
   transition: all 0.15s ease;
@@ -2648,33 +2704,38 @@ function CommunityPage() {
           )}
 
         <SearchContainer>
-          <form
-            onSubmit={handleSearch}
-            style={{ flex: 1, display: "flex", gap: "0.5rem", flexWrap: "wrap" }}
-          >
-            {/* 검색 대상 드롭다운 */}
-            <SearchTypeSelect
-              value={searchType}
-              onChange={(e) => setSearchType(e.target.value)}
-            >
-              <option value="all">전체</option>
-              <option value="title">제목</option>
-              <option value="content">내용</option>
-              <option value="titleContent">제목+내용</option>
-              <option value="author">작성자</option>
-            </SearchTypeSelect>
+          <SearchForm onSubmit={handleSearch}>
+            <SearchRow>
+              <SearchTypeSelect
+                value={searchType}
+                onChange={(e) => setSearchType(e.target.value)}
+              >
+                <option value="all">전체</option>
+                <option value="title">제목</option>
+                <option value="content">내용</option>
+                <option value="titleContent">제목+내용</option>
+                <option value="author">작성자</option>
+              </SearchTypeSelect>
 
-            <SearchInputWrapper style={{ flex: 1, minWidth: "200px" }}>
-              <SearchIcon>🔍</SearchIcon>
-              <SearchInput
-                type="text"
-                placeholder="검색어를 입력하세요..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </SearchInputWrapper>
+              <SearchInputWrapper style={{ flex: 1, minWidth: "200px" }}>
+                <SearchIcon>🔍</SearchIcon>
+                <SearchInput
+                  type="text"
+                  placeholder="검색어를 입력하세요..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </SearchInputWrapper>
 
-            {/* 기간 필터 */}
+              {searchQuery && (
+                <ClearButton type="button" onClick={handleClearSearch}>
+                  ✕
+                </ClearButton>
+              )}
+              <SearchButton type="submit">검색</SearchButton>
+            </SearchRow>
+
+            {/* 기간 필터 - 별도 행으로 분리 */}
             <DateFilterContainer>
               <DateInput
                 type="date"
@@ -2690,14 +2751,7 @@ function CommunityPage() {
                 placeholder="종료일"
               />
             </DateFilterContainer>
-
-            {searchQuery && (
-              <ClearButton type="button" onClick={handleClearSearch}>
-                ✕
-              </ClearButton>
-            )}
-            <SearchButton type="submit">검색</SearchButton>
-          </form>
+          </SearchForm>
         </SearchContainer>
 
         <SortBar>
