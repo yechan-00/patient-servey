@@ -3004,14 +3004,16 @@ function CommunityPage() {
                         </TableCell>
                       </TableRow>
                     );
-                      })}
+                  })}
                 </TableBody>
               </PostTable>
             </PostListContainer>
             {totalPages > 1 && (
               <PageInfo>
                 <PaginationButton
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
                   disabled={currentPage === 1}
                 >
                   &lt;

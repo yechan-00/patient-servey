@@ -676,17 +676,20 @@ const CommentList = styled.div`
 
 // 댓글 카드: 플랫하게 (카드 느낌 제거)
 const CommentCard = styled.div`
-  padding: ${SPACING.sm} 0; // md → sm으로 축소
+  padding: ${SPACING.sm} ${SPACING.md}; // 좌우 패딩 추가
   background-color: #fafbfc; // 배경색 추가로 구별 쉽게
   border-radius: 6px; // 둥글게
   border: 1px solid #e5e7eb; // 테두리 추가
   margin-bottom: ${SPACING.sm}; // md → sm으로 축소
-  padding: ${SPACING.sm} ${SPACING.md}; // 좌우 패딩 추가
   transition: all 0.2s ease;
+  overflow: hidden; // 박스를 넘어가는 요소 방지
+  position: relative; // border-left 위치 지정을 위해
 
   &:hover {
     background-color: #f8f9fa;
     border-color: #d1d5db;
+    border-left: 3px solid #2563eb; // 호버 시 좌측 굵은 선
+    padding-left: calc(${SPACING.md} - 2px); // border 두께만큼 padding 조정
   }
 
   &:last-child {

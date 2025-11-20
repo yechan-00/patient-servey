@@ -3,8 +3,19 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { useAuth } from "../contexts/AuthContext";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  orderBy,
+  updateDoc,
+  doc,
+  writeBatch,
+  serverTimestamp,
+} from "firebase/firestore";
 import { db } from "../firebase";
+import { formatRelativeTime } from "../utils/helpers";
 
 const Container = styled.div`
   min-height: 100vh;
@@ -180,13 +191,148 @@ const Main = styled.main`
   background-color: #f8f9fa;
 `;
 
+// 알림 드롭다운 스타일
+const NotificationDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  width: 380px;
+  max-height: 500px;
+  z-index: 1001;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+`;
+
+const NotificationDropdownHeader = styled.div`
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f9fafb;
+`;
+
+const NotificationDropdownTitle = styled.h3`
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+`;
+
+const MarkAllReadButton = styled.button`
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: #eff6ff;
+  }
+`;
+
+const NotificationDropdownContent = styled.div`
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+`;
+
+const NotificationDropdownItem = styled.div`
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background-color: ${(props) => (props.read ? "white" : "#fef3c7")};
+  position: relative;
+
+  &:hover {
+    background-color: ${(props) => (props.read ? "#f9fafb" : "#fde68a")};
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const NotificationItemContent = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const NotificationItemText = styled.div`
+  font-size: 0.875rem;
+  color: #1f2937;
+  line-height: 1.5;
+  margin-bottom: 0.25rem;
+  font-weight: ${(props) => (props.read ? "400" : "500")};
+`;
+
+const NotificationItemDate = styled.div`
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+`;
+
+const UnreadDot = styled.div`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #2563eb;
+  flex-shrink: 0;
+  margin-top: 0.375rem;
+`;
+
+const EmptyNotificationMessage = styled.div`
+  padding: 2rem 1.25rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.875rem;
+`;
+
+const ViewAllNotificationsButton = styled.button`
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  background-color: #f9fafb;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  color: #2563eb;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: #f3f4f6;
+  }
+`;
+
 function Layout({ children }) {
   const { currentUser, userProfile, signOut } = useAuth();
   const navigate = useNavigate();
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showNotificationDropdown, setShowNotificationDropdown] =
+    useState(false);
+  const [notifications, setNotifications] = useState([]);
   const dropdownRef = useRef(null);
+  const notificationDropdownRef = useRef(null);
 
+  // 읽지 않은 알림 수만 가져오기
   useEffect(() => {
     if (!currentUser) {
       setUnreadNotificationCount(0);
@@ -213,6 +359,36 @@ function Layout({ children }) {
     return () => unsubscribe();
   }, [currentUser]);
 
+  // 알림 목록 가져오기 (드롭다운용)
+  useEffect(() => {
+    if (!currentUser || !showNotificationDropdown) {
+      return;
+    }
+
+    const notificationsRef = collection(db, "community_notifications");
+    const q = query(
+      notificationsRef,
+      where("userId", "==", currentUser.uid),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const notificationsData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setNotifications(notificationsData);
+      },
+      (error) => {
+        console.error("알림 목록 로드 오류:", error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [currentUser, showNotificationDropdown]);
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -230,16 +406,84 @@ function Layout({ children }) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowUserDropdown(false);
       }
+      if (
+        notificationDropdownRef.current &&
+        !notificationDropdownRef.current.contains(event.target)
+      ) {
+        setShowNotificationDropdown(false);
+      }
     };
 
-    if (showUserDropdown) {
+    if (showUserDropdown || showNotificationDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showUserDropdown]);
+  }, [showUserDropdown, showNotificationDropdown]);
+
+  // 알림 클릭 핸들러
+  const handleNotificationClick = async (notification) => {
+    // 알림 읽음 처리
+    if (!notification.read) {
+      try {
+        const notificationRef = doc(
+          db,
+          "community_notifications",
+          notification.id
+        );
+        await updateDoc(notificationRef, {
+          read: true,
+          readAt: serverTimestamp(),
+        });
+      } catch (error) {
+        console.error("알림 읽음 처리 오류:", error);
+      }
+    }
+
+    // 드롭다운 닫기
+    setShowNotificationDropdown(false);
+
+    // 해당 게시글로 이동
+    if (notification.postId) {
+      navigate(`/community/post/${notification.postId}`);
+    }
+  };
+
+  // 모든 알림 읽음 처리
+  const handleMarkAllNotificationsRead = async () => {
+    if (!currentUser) return;
+
+    try {
+      const unreadNotifications = notifications.filter((n) => !n.read);
+      if (unreadNotifications.length === 0) return;
+
+      const batch = writeBatch(db);
+      unreadNotifications.forEach((notification) => {
+        const notificationRef = doc(
+          db,
+          "community_notifications",
+          notification.id
+        );
+        batch.update(notificationRef, {
+          read: true,
+          readAt: serverTimestamp(),
+        });
+      });
+
+      await batch.commit();
+    } catch (error) {
+      console.error("모든 알림 읽음 처리 오류:", error);
+    }
+  };
+
+  // 알림 날짜 포맷팅
+  const formatNotificationDate = (timestamp) => {
+    if (!timestamp) return "";
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return formatRelativeTime(date);
+  };
 
   return (
     <Container>
@@ -247,17 +491,80 @@ function Layout({ children }) {
         <NavContent>
           <Logo to="/">암 환자 커뮤니티</Logo>
           <NavLinks>
-            <NavLink to="/surveys">설문</NavLink>
             {currentUser && (
               <>
-                <NavLink to="/notifications">
-                  알림
-                  {unreadNotificationCount > 0 && (
-                    <NotificationBadge>
-                      {unreadNotificationCount}
-                    </NotificationBadge>
+                <UserMenu style={{ position: "relative" }}>
+                  <NavLink
+                    to="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowNotificationDropdown(!showNotificationDropdown);
+                    }}
+                    style={{ position: "relative" }}
+                  >
+                    알림
+                    {unreadNotificationCount > 0 && (
+                      <NotificationBadge>
+                        {unreadNotificationCount}
+                      </NotificationBadge>
+                    )}
+                  </NavLink>
+                  {showNotificationDropdown && (
+                    <NotificationDropdown ref={notificationDropdownRef}>
+                      <NotificationDropdownHeader>
+                        <NotificationDropdownTitle>
+                          알림
+                        </NotificationDropdownTitle>
+                        {unreadNotificationCount > 0 && (
+                          <MarkAllReadButton
+                            onClick={handleMarkAllNotificationsRead}
+                          >
+                            모두 읽음
+                          </MarkAllReadButton>
+                        )}
+                      </NotificationDropdownHeader>
+                      <NotificationDropdownContent>
+                        {notifications.length === 0 ? (
+                          <EmptyNotificationMessage>
+                            알림이 없습니다.
+                          </EmptyNotificationMessage>
+                        ) : (
+                          notifications.slice(0, 10).map((notification) => (
+                            <NotificationDropdownItem
+                              key={notification.id}
+                              read={notification.read}
+                              onClick={() =>
+                                handleNotificationClick(notification)
+                              }
+                            >
+                              <NotificationItemContent>
+                                <NotificationItemText>
+                                  {notification.message}
+                                </NotificationItemText>
+                                <NotificationItemDate>
+                                  {formatNotificationDate(
+                                    notification.createdAt
+                                  )}
+                                </NotificationItemDate>
+                              </NotificationItemContent>
+                              {!notification.read && <UnreadDot />}
+                            </NotificationDropdownItem>
+                          ))
+                        )}
+                        {notifications.length > 10 && (
+                          <ViewAllNotificationsButton
+                            onClick={() => {
+                              setShowNotificationDropdown(false);
+                              navigate("/notifications");
+                            }}
+                          >
+                            모든 알림 보기
+                          </ViewAllNotificationsButton>
+                        )}
+                      </NotificationDropdownContent>
+                    </NotificationDropdown>
                   )}
-                </NavLink>
+                </UserMenu>
                 {(userProfile?.isAdmin || userProfile?.role === "admin") && (
                   <NavLink to="/admin">관리자</NavLink>
                 )}
