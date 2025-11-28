@@ -159,8 +159,7 @@ const DropdownItem = styled.button`
   }
 
   &:last-child {
-    border-bottom: 2px solid #e5e7eb;
-    margin-bottom: 0.5rem;
+    border-bottom: none;
   }
 `;
 
@@ -637,6 +636,7 @@ function Layout({ children }) {
                     >
                       내 설문 이력
                     </DropdownItem>
+                    <DropdownDivider />
                     <DropdownItem
                       onClick={() => {
                         navigate("/bookmarks");

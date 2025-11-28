@@ -20,6 +20,7 @@ import {
 } from "../utils/constants";
 import { formatRelativeTime } from "../utils/helpers";
 import theme from "../styles/theme";
+import supportCenters from "../utils/supportCentersData";
 
 // 설문 배너 스타일 - 축소 및 톤다운 (overflow 제거로 잘림 방지)
 const SurveyBanner = styled.div`
@@ -1012,7 +1013,8 @@ const SupportFilterSection = styled.div`
 
 const FilterGroup = styled.div`
   flex: 1;
-  min-width: 200px;
+  min-width: 150px;
+  max-width: 200px;
 `;
 
 const SupportFilterLabel = styled.label`
@@ -1718,6 +1720,10 @@ function CommunityPage() {
   const [selectedRegion, setSelectedRegion] = useState("all");
   const [selectedSupportCancerType, setSelectedSupportCancerType] =
     useState("all");
+  const [selectedSupportCenterType, setSelectedSupportCenterType] =
+    useState("all");
+  const [supportCenterSearchQuery, setSupportCenterSearchQuery] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
   const [bestPosts, setBestPosts] = useState([]);
   const [searchType, setSearchType] = useState("all"); // 제목, 내용, 제목+내용, 작성자
   const [startDate, setStartDate] = useState("");
@@ -2122,55 +2128,28 @@ function CommunityPage() {
     setShowSupportCenterModal(false);
     setSelectedRegion("all");
     setSelectedSupportCancerType("all");
+    setSelectedSupportCenterType("all");
+    setSupportCenterSearchQuery("");
+    setHasSearched(false);
   };
 
-  // 지원 센터 데이터 (샘플 - 실제로는 Firebase나 API에서 가져올 수 있음)
-  const supportCenters = [
-    {
-      id: 1,
-      name: "서울아산병원 암센터",
-      region: "서울",
-      cancerTypes: ["all", "breast", "lung"],
-      address: "서울특별시 송파구 올림픽로43길 88",
-      phone: "02-3010-3114",
-      services: ["치료", "상담", "재활"],
-    },
-    {
-      id: 2,
-      name: "세브란스병원 암센터",
-      region: "서울",
-      cancerTypes: ["all", "stomach", "colon"],
-      address: "서울특별시 서대문구 연세로 50-1",
-      phone: "02-2228-5800",
-      services: ["치료", "상담", "지원"],
-    },
-    {
-      id: 3,
-      name: "삼성서울병원 암센터",
-      region: "서울",
-      cancerTypes: ["all", "liver", "pancreas"],
-      address: "서울특별시 강남구 일원로 81",
-      phone: "02-3410-2114",
-      services: ["치료", "상담", "재활"],
-    },
-    {
-      id: 4,
-      name: "국립암센터",
-      region: "경기",
-      cancerTypes: ["all"],
-      address: "경기도 고양시 일산동구 일산로 323",
-      phone: "031-920-0114",
-      services: ["치료", "상담", "연구", "교육"],
-    },
-    {
-      id: 5,
-      name: "부산대학교병원 암센터",
-      region: "부산",
-      cancerTypes: ["all", "breast", "thyroid"],
-      address: "부산광역시 남구 용소로 179",
-      phone: "051-240-7114",
-      services: ["치료", "상담"],
-    },
+  const handleSupportCenterSearch = () => {
+    setHasSearched(true);
+  };
+
+  // 지원 센터 데이터는 utils/supportCentersData.js에서 import
+
+  // 구분 필터 옵션
+  const supportCenterTypes = [
+    { value: "all", label: "전체" },
+    { value: "tertiary_hospital", label: "상급종합병원 암센터" },
+    { value: "national", label: "국립 기관" },
+    { value: "counseling", label: "전문 상담/지원센터" },
+    { value: "public_rehab", label: "공공 재활/완화의료 기관" },
+    { value: "regional", label: "지역 암센터" },
+    { value: "psychological", label: "암 관련 심리지원 기관" },
+    { value: "rehab", label: "암 관련 재활센터" },
+    { value: "nonprofit", label: "환우회/비영리기관" },
   ];
 
   // 필터링된 지원 센터 목록
@@ -2179,9 +2158,20 @@ function CommunityPage() {
       selectedRegion === "all" || center.region === selectedRegion;
     const cancerMatch =
       selectedSupportCancerType === "all" ||
-      center.cancerTypes.includes(selectedSupportCancerType) ||
-      center.cancerTypes.includes("all");
-    return regionMatch && cancerMatch;
+      center.cancerTypes?.includes(selectedSupportCancerType) ||
+      center.cancerTypes?.includes("all");
+    const typeMatch =
+      selectedSupportCenterType === "all" ||
+      center.type === selectedSupportCenterType;
+    const searchMatch =
+      !supportCenterSearchQuery.trim() ||
+      center.name
+        ?.toLowerCase()
+        .includes(supportCenterSearchQuery.toLowerCase().trim()) ||
+      center.address
+        ?.toLowerCase()
+        .includes(supportCenterSearchQuery.toLowerCase().trim());
+    return regionMatch && cancerMatch && typeMatch && searchMatch;
   });
 
   // 지역 목록
@@ -2207,6 +2197,7 @@ function CommunityPage() {
     { value: "liver", label: "간암" },
     { value: "pancreas", label: "췌장암" },
     { value: "thyroid", label: "갑상선암" },
+    { value: "other", label: "기타암" },
   ];
 
   const noticeContents = {
@@ -3055,6 +3046,23 @@ function CommunityPage() {
             <ModalTitle>🏥 지원 센터 찾기</ModalTitle>
             <ModalBody>
               <SupportFilterSection>
+                <FilterGroup style={{ flex: "1 1 100%" }}>
+                  <SupportFilterLabel>검색어</SupportFilterLabel>
+                  <SearchInputWrapper>
+                    <SearchIcon>🔍</SearchIcon>
+                    <SearchInput
+                      type="text"
+                      placeholder="병원명 또는 주소로 검색하세요"
+                      value={supportCenterSearchQuery}
+                      onChange={(e) =>
+                        setSupportCenterSearchQuery(e.target.value)
+                      }
+                    />
+                  </SearchInputWrapper>
+                </FilterGroup>
+              </SupportFilterSection>
+
+              <SupportFilterSection>
                 <FilterGroup>
                   <SupportFilterLabel>지역 선택</SupportFilterLabel>
                   <FilterSelect
@@ -3072,6 +3080,21 @@ function CommunityPage() {
                   </FilterSelect>
                 </FilterGroup>
                 <FilterGroup>
+                  <SupportFilterLabel>구분</SupportFilterLabel>
+                  <FilterSelect
+                    value={selectedSupportCenterType}
+                    onChange={(e) =>
+                      setSelectedSupportCenterType(e.target.value)
+                    }
+                  >
+                    {supportCenterTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </FilterSelect>
+                </FilterGroup>
+                <FilterGroup>
                   <SupportFilterLabel>암 종류</SupportFilterLabel>
                   <FilterSelect
                     value={selectedSupportCancerType}
@@ -3086,38 +3109,75 @@ function CommunityPage() {
                     ))}
                   </FilterSelect>
                 </FilterGroup>
+                <FilterGroup
+                  style={{
+                    flex: "0 0 auto",
+                    maxWidth: "120px",
+                    alignSelf: "flex-end",
+                  }}
+                >
+                  <SupportFilterLabel style={{ visibility: "hidden" }}>
+                    검색
+                  </SupportFilterLabel>
+                  <SearchButton
+                    onClick={handleSupportCenterSearch}
+                    type="button"
+                  >
+                    검색
+                  </SearchButton>
+                </FilterGroup>
               </SupportFilterSection>
 
-              <SupportCenterList>
-                {filteredSupportCenters.length > 0 ? (
-                  filteredSupportCenters.map((center) => (
-                    <SupportCenterCard key={center.id}>
-                      <SupportCenterName>{center.name}</SupportCenterName>
-                      <SupportCenterInfo>
-                        <p>
-                          <strong>📍 지역:</strong> {center.region}
-                        </p>
-                        <p>
-                          <strong>📞 전화:</strong> {center.phone}
-                        </p>
-                        <p>
-                          <strong>📍 주소:</strong> {center.address}
-                        </p>
-                        <p>
-                          <strong>💼 제공 서비스:</strong>{" "}
-                          {center.services.join(", ")}
-                        </p>
-                      </SupportCenterInfo>
-                    </SupportCenterCard>
-                  ))
-                ) : (
-                  <EmptySupportMessage>
-                    선택하신 조건에 맞는 지원 센터가 없습니다.
-                    <br />
-                    다른 조건으로 검색해보세요.
-                  </EmptySupportMessage>
-                )}
-              </SupportCenterList>
+              {hasSearched ? (
+                <SupportCenterList>
+                  {filteredSupportCenters.length > 0 ? (
+                    filteredSupportCenters.map((center) => (
+                      <SupportCenterCard key={center.id}>
+                        <SupportCenterName>{center.name}</SupportCenterName>
+                        <SupportCenterInfo>
+                          <p>
+                            <strong>📍 지역:</strong> {center.region}
+                          </p>
+                          {center.type && (
+                            <p>
+                              <strong>🏷️ 구분:</strong>{" "}
+                              {supportCenterTypes.find(
+                                (t) => t.value === center.type
+                              )?.label || center.type}
+                            </p>
+                          )}
+                          {center.phone && (
+                            <p>
+                              <strong>📞 전화:</strong> {center.phone}
+                            </p>
+                          )}
+                          {center.address && (
+                            <p>
+                              <strong>📍 주소:</strong> {center.address}
+                            </p>
+                          )}
+                          {center.services && center.services.length > 0 && (
+                            <p>
+                              <strong>💼 제공 서비스:</strong>{" "}
+                              {center.services.join(", ")}
+                            </p>
+                          )}
+                        </SupportCenterInfo>
+                      </SupportCenterCard>
+                    ))
+                  ) : (
+                    <EmptySupportMessage>
+                      선택하신 조건에 맞는 지원 센터가 없습니다.
+                      <br />
+                      다른 조건으로 검색해보세요.
+                    </EmptySupportMessage>
+                  )}
+                </SupportCenterList>
+              ) : (
+                <EmptySupportMessage>
+                  검색어를 입력하거나 필터를 선택한 후 검색 버튼을 눌러주세요.
+                </EmptySupportMessage>
+              )}
             </ModalBody>
             <ModalCloseButton onClick={handleCloseSupportCenterModal}>
               닫기

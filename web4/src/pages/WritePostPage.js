@@ -17,182 +17,316 @@ import {
   SUPPORT_TYPES,
 } from "../utils/constants";
 import { getDisplayName } from "../utils/helpers";
+import { Info, Edit, Hospital, BookOpen, HandHeart } from "lucide-react";
+
+// 브랜드 색상 토큰
+const colors = {
+  brandBlue: "#3B5CCC",
+  brandBlueHover: "#304bb0",
+  textPrimary: "#1f2d53",
+  textSecondary: "#4b587c",
+  border: "#d7dcef",
+  borderHover: "#d0d4e3",
+  placeholder: "#9ba4bf",
+  background: "#f5f7ff",
+  error: "#ff5b5b",
+};
 
 const Container = styled.div`
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 2rem 1.5rem;
+  background: linear-gradient(to bottom, #f9faff, #ffffff 40%);
+  min-height: calc(100vh - 200px);
+
+  @media (max-width: 768px) {
+    padding: 1.5rem 1rem;
+  }
 `;
 
 const Header = styled.div`
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+  padding-top: 0.5rem;
 `;
 
 const Title = styled.h1`
-  font-size: 2rem;
-  color: #2a5e8c;
+  font-size: 1.75rem;
+  color: ${colors.textPrimary};
+  margin: 0 0 0.375rem 0;
+  font-weight: 700;
+  text-align: left;
+  letter-spacing: -0.02em;
+`;
+
+const Subtitle = styled.p`
+  font-size: 0.875rem;
+  color: ${colors.textSecondary};
   margin: 0;
+  font-weight: 400;
+  line-height: 1.5;
 `;
 
 const Form = styled.form`
-  background-color: white;
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: #ffffff;
+  border-radius: 14px;
+  padding: 32px 28px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+
+  @media (max-width: 768px) {
+    padding: 24px 20px;
+  }
+`;
+
+const FormSection = styled.div`
+  margin-bottom: 32px;
+
+  &:last-of-type {
+    margin-bottom: 0;
+  }
+`;
+
+const SectionTitle = styled.h3`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: ${colors.textPrimary};
+  margin: 0 0 12px 0;
+  padding: 0;
+`;
+
+const SectionIcon = styled.div`
+  display: flex;
+  align-items: center;
+  color: ${colors.brandBlue};
+  width: 18px;
+  height: 18px;
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: 1.5rem;
+  margin-bottom: 20px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const FormRow = styled.div`
+  display: flex;
+  gap: 1.25rem;
+  margin-bottom: 20px;
+
+  & > ${FormGroup} {
+    flex: 1;
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
 `;
 
 const Label = styled.label`
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #495057;
-  font-size: 0.9rem;
+  font-size: 14px;
+  font-weight: 600;
+  color: ${colors.textPrimary};
+  margin-bottom: 8px;
+  line-height: 1.5;
 `;
 
 const RequiredLabel = styled(Label)`
-  &::after {
-    content: " *";
-    color: #dc3545;
+  &::before {
+    content: "*";
+    color: ${colors.error};
+    margin-right: 4px;
   }
+`;
+
+const OptionalLabel = styled(Label)`
+  /* 선택 필드는 별도 표시 없음 */
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 0.75rem;
-  font-size: 1rem;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
-  transition: all 0.3s ease;
+  height: 46px;
+  padding: 12px 14px;
+  font-size: 0.9375rem;
+  border: 1px solid ${colors.border};
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  color: ${colors.textPrimary};
+  background-color: white;
+  line-height: 1.5;
+
+  &::placeholder {
+    color: ${colors.placeholder};
+    font-weight: 400;
+  }
 
   &:focus {
-    border-color: #2a5e8c;
+    border-color: ${colors.brandBlue};
     outline: none;
-    box-shadow: 0 0 0 3px rgba(42, 94, 140, 0.1);
+    box-shadow: 0 0 0 3px rgba(59, 92, 204, 0.12);
   }
 `;
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 0.75rem;
-  font-size: 1rem;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
-  min-height: 300px;
+  padding: 12px 14px;
+  font-size: 0.9375rem;
+  border: 1px solid ${colors.border};
+  border-radius: 10px;
+  min-height: 160px;
   resize: vertical;
   font-family: inherit;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  color: ${colors.textPrimary};
+  background-color: white;
+  line-height: 1.6;
+
+  &::placeholder {
+    color: ${colors.placeholder};
+    font-weight: 400;
+  }
 
   &:focus {
-    border-color: #2a5e8c;
+    border-color: ${colors.brandBlue};
     outline: none;
-    box-shadow: 0 0 0 3px rgba(42, 94, 140, 0.1);
+    box-shadow: 0 0 0 3px rgba(59, 92, 204, 0.12);
   }
 `;
 
 const Select = styled.select`
   width: 100%;
-  padding: 0.75rem;
-  font-size: 1rem;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
+  height: 46px;
+  padding: 12px 14px;
+  font-size: 0.9375rem;
+  border: 1px solid ${colors.border};
+  border-radius: 10px;
   background-color: white;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  color: ${colors.textPrimary};
+  cursor: pointer;
+  line-height: 1.5;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239ba4bf' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 2.5rem;
 
   &:focus {
-    border-color: #2a5e8c;
+    border-color: ${colors.brandBlue};
     outline: none;
-    box-shadow: 0 0 0 3px rgba(42, 94, 140, 0.1);
+    box-shadow: 0 0 0 3px rgba(59, 92, 204, 0.12);
   }
 `;
 
 const CheckboxGroup = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-top: 0.5rem;
+  gap: 0.875rem 1.25rem;
+  margin-top: 8px;
 `;
 
 const CheckboxLabel = styled.label`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.9rem;
-  color: #495057;
+  font-size: 0.875rem;
+  color: ${colors.textSecondary};
   cursor: pointer;
+  font-weight: 500;
+  line-height: 1.5;
 
   input[type="checkbox"] {
     width: 18px;
     height: 18px;
     cursor: pointer;
+    accent-color: ${colors.brandBlue};
   }
 `;
 
 const InfoBox = styled.div`
-  background-color: #e7f3ff;
-  border-left: 4px solid #2a5e8c;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-  color: #495057;
+  background-color: ${colors.background};
+  padding: 0.875rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: 0.875rem;
+  color: ${colors.textSecondary};
+  line-height: 1.6;
+  font-weight: 400;
 `;
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: 1rem;
-  margin-top: 2rem;
+  gap: 0.75rem;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #f1f5f9;
+  justify-content: flex-end;
 `;
 
 const Button = styled.button`
-  flex: 1;
-  padding: 0.875rem;
-  font-size: 1rem;
+  padding: 12px 24px;
+  font-size: 0.9375rem;
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 100px;
+  height: 46px;
 `;
 
 const SubmitButton = styled(Button)`
-  background-color: #2a5e8c;
+  background-color: ${colors.brandBlue};
   color: white;
   border: none;
 
   &:hover {
-    background-color: #1d4269;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(42, 94, 140, 0.3);
+    background-color: ${colors.brandBlueHover};
   }
 
   &:disabled {
-    background-color: #6c757d;
+    background-color: #94a3b8;
     cursor: not-allowed;
-    transform: none;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
   }
 `;
 
 const CancelButton = styled(Button)`
   background-color: white;
-  color: #6c757d;
-  border: 2px solid #e9ecef;
+  color: ${colors.textSecondary};
+  border: 1px solid ${colors.borderHover};
 
   &:hover {
-    background-color: #f8f9fa;
-    border-color: #6c757d;
+    background-color: ${colors.background};
   }
 `;
 
 const ErrorMessage = styled.p`
-  color: #dc3545;
-  margin-top: 1rem;
-  padding: 0.75rem;
-  background-color: #f8d7da;
-  border-radius: 6px;
-  font-size: 0.9rem;
+  color: ${colors.error};
+  margin-top: 20px;
+  padding: 0.875rem 1rem;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
 `;
 
 function WritePostPage() {
@@ -348,49 +482,64 @@ function WritePostPage() {
     <Container>
       <Header>
         <Title>게시글 작성</Title>
+        <Subtitle>커뮤니티 구성원들과 경험을 나누어 보세요.</Subtitle>
       </Header>
 
       <Form onSubmit={handleSubmit}>
-        <FormGroup>
-          <RequiredLabel htmlFor="category">카테고리</RequiredLabel>
-          <Select
-            id="category"
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            required
-          >
-            {CATEGORIES.filter((c) => c.id !== "all").map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </Select>
-        </FormGroup>
+        <FormSection>
+          <SectionTitle>
+            <SectionIcon>
+              <Info size={18} />
+            </SectionIcon>
+            기본 정보
+          </SectionTitle>
+          <FormRow>
+            <FormGroup>
+              <RequiredLabel htmlFor="category">카테고리</RequiredLabel>
+              <Select
+                id="category"
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                required
+              >
+                {CATEGORIES.filter((c) => c.id !== "all").map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </Select>
+            </FormGroup>
 
-        <FormGroup>
-          <Label htmlFor="cancerType">
-            암 종류 (선택사항) - 같은 암 종류 환자들이 찾기 쉽게 합니다
-          </Label>
-          <Select
-            id="cancerType"
-            name="cancerType"
-            value={formData.cancerType}
-            onChange={handleChange}
-          >
-            {CANCER_TYPES.map((type) => (
-              <option key={type.id} value={type.id}>
-                {type.name}
-              </option>
-            ))}
-          </Select>
-        </FormGroup>
+            <FormGroup>
+              <OptionalLabel htmlFor="cancerType">암 종류</OptionalLabel>
+              <Select
+                id="cancerType"
+                name="cancerType"
+                value={formData.cancerType}
+                onChange={handleChange}
+              >
+                {CANCER_TYPES.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))}
+              </Select>
+            </FormGroup>
+          </FormRow>
+        </FormSection>
 
         {/* 후기 게시판 특화 필드 */}
         {formData.category === "review" && (
-          <>
+          <FormSection>
+            <SectionTitle>
+              <SectionIcon>
+                <Hospital size={18} />
+              </SectionIcon>
+              후기 정보
+            </SectionTitle>
             <InfoBox>
-              💡 후기 게시판에서는 병원, 치료 방법, 부작용 등 구체적인 정보를
+              후기 게시판에서는 병원, 치료 방법, 부작용 등 구체적인 정보를
               공유해주세요. 다른 환자분들에게 도움이 됩니다.
             </InfoBox>
 
@@ -425,7 +574,7 @@ function WritePostPage() {
             </FormGroup>
 
             <FormGroup>
-              <Label htmlFor="treatmentPeriod">치료 기간</Label>
+              <OptionalLabel htmlFor="treatmentPeriod">치료 기간</OptionalLabel>
               <Input
                 type="text"
                 id="treatmentPeriod"
@@ -437,7 +586,7 @@ function WritePostPage() {
             </FormGroup>
 
             <FormGroup>
-              <Label>부작용 (복수 선택 가능)</Label>
+              <OptionalLabel>부작용 (복수 선택 가능)</OptionalLabel>
               <CheckboxGroup>
                 {SIDE_EFFECTS.map((effect) => (
                   <CheckboxLabel key={effect.id}>
@@ -455,7 +604,7 @@ function WritePostPage() {
             </FormGroup>
 
             <FormGroup>
-              <Label htmlFor="satisfaction">만족도</Label>
+              <OptionalLabel htmlFor="satisfaction">만족도</OptionalLabel>
               <Select
                 id="satisfaction"
                 name="satisfaction"
@@ -488,14 +637,20 @@ function WritePostPage() {
                 ))}
               </Select>
             </FormGroup>
-          </>
+          </FormSection>
         )}
 
         {/* 정보공유 게시판 특화 필드 */}
         {formData.category === "info" && (
-          <>
+          <FormSection>
+            <SectionTitle>
+              <SectionIcon>
+                <BookOpen size={18} />
+              </SectionIcon>
+              정보 상세
+            </SectionTitle>
             <InfoBox>
-              💡 정보공유 게시판에서는 유용한 정보를 체계적으로 공유해주세요.
+              정보공유 게시판에서는 유용한 정보를 체계적으로 공유해주세요.
               출처를 명시하면 신뢰도가 높아집니다.
             </InfoBox>
 
@@ -518,7 +673,7 @@ function WritePostPage() {
             </FormGroup>
 
             <FormGroup>
-              <Label htmlFor="region">지역 (선택사항)</Label>
+              <OptionalLabel htmlFor="region">지역</OptionalLabel>
               <Select
                 id="region"
                 name="region"
@@ -535,7 +690,7 @@ function WritePostPage() {
             </FormGroup>
 
             <FormGroup>
-              <Label htmlFor="sourceLink">출처/링크 (선택사항)</Label>
+              <OptionalLabel htmlFor="sourceLink">출처/링크</OptionalLabel>
               <Input
                 type="url"
                 id="sourceLink"
@@ -545,14 +700,20 @@ function WritePostPage() {
                 placeholder="https://..."
               />
             </FormGroup>
-          </>
+          </FormSection>
         )}
 
         {/* 지원 요청 게시판 특화 필드 */}
         {formData.category === "support" && (
-          <>
+          <FormSection>
+            <SectionTitle>
+              <SectionIcon>
+                <HandHeart size={18} />
+              </SectionIcon>
+              지원 요청 정보
+            </SectionTitle>
             <InfoBox>
-              💡 지원 요청 게시판에서는 필요한 도움을 구체적으로 설명해주세요.
+              지원 요청 게시판에서는 필요한 도움을 구체적으로 설명해주세요.
               구체적인 내용을 작성할수록 더 정확한 도움을 받을 수 있습니다.
             </InfoBox>
 
@@ -575,7 +736,7 @@ function WritePostPage() {
             </FormGroup>
 
             <FormGroup>
-              <Label htmlFor="supportRegion">지역 (선택사항)</Label>
+              <OptionalLabel htmlFor="supportRegion">지역</OptionalLabel>
               <Select
                 id="supportRegion"
                 name="supportRegion"
@@ -590,34 +751,42 @@ function WritePostPage() {
                 ))}
               </Select>
             </FormGroup>
-          </>
+          </FormSection>
         )}
 
-        <FormGroup>
-          <RequiredLabel htmlFor="title">제목</RequiredLabel>
-          <Input
-            type="text"
-            id="title"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            placeholder="제목을 입력하세요"
-            required
-            maxLength={100}
-          />
-        </FormGroup>
+        <FormSection>
+          <SectionTitle>
+            <SectionIcon>
+              <Edit size={18} />
+            </SectionIcon>
+            게시글 내용
+          </SectionTitle>
+          <FormGroup>
+            <RequiredLabel htmlFor="title">제목</RequiredLabel>
+            <Input
+              type="text"
+              id="title"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              placeholder="제목을 입력하세요"
+              required
+              maxLength={100}
+            />
+          </FormGroup>
 
-        <FormGroup>
-          <RequiredLabel htmlFor="content">내용</RequiredLabel>
-          <TextArea
-            id="content"
-            name="content"
-            value={formData.content}
-            onChange={handleChange}
-            placeholder="내용을 입력하세요"
-            required
-          />
-        </FormGroup>
+          <FormGroup>
+            <RequiredLabel htmlFor="content">내용</RequiredLabel>
+            <TextArea
+              id="content"
+              name="content"
+              value={formData.content}
+              onChange={handleChange}
+              placeholder="내용을 입력하세요"
+              required
+            />
+          </FormGroup>
+        </FormSection>
 
         {error && <ErrorMessage>{error}</ErrorMessage>}
 
@@ -626,6 +795,7 @@ function WritePostPage() {
             취소
           </CancelButton>
           <SubmitButton type="submit" disabled={loading}>
+            <Edit size={18} />
             {loading ? "작성 중..." : "작성하기"}
           </SubmitButton>
         </ButtonGroup>
