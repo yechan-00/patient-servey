@@ -1426,76 +1426,6 @@ const BestPostsTitle = styled.h2`
   }
 `;
 
-// 암 관련 정보 섹션
-const CancerInfoSection = styled.div`
-  margin-bottom: 2rem;
-  padding: 1.5rem;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e9ecef;
-`;
-
-const CancerInfoTitle = styled.h2`
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 1.25rem 0;
-  font-family: ${theme.typography.fontFamily.korean};
-`;
-
-const CancerInfoGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
-`;
-
-const CancerInfoCard = styled.div`
-  padding: 1.25rem;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border-radius: 8px;
-  border: 1px solid #bae6fd;
-  transition: all 0.15s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
-    border-color: #0284c7;
-  }
-`;
-
-const CancerInfoCardTitle = styled.h3`
-  font-size: 1rem;
-  font-weight: 600;
-  color: #0369a1;
-  margin: 0 0 0.5rem 0;
-  font-family: ${theme.typography.fontFamily.korean};
-`;
-
-const CancerInfoCardText = styled.p`
-  font-size: 0.875rem;
-  color: #475569;
-  margin: 0 0 0.75rem 0;
-  line-height: 1.6;
-  font-family: ${theme.typography.fontFamily.korean};
-`;
-
-const CancerInfoCardButton = styled.button`
-  padding: 0.5rem 1rem;
-  background: #0284c7;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  &:hover {
-    background: #0369a1;
-  }
-`;
-
 // 검색 대상 드롭다운
 const SearchTypeSelect = styled.select`
   padding: 0.625rem 0.875rem;
@@ -2574,134 +2504,102 @@ function CommunityPage() {
           </FilterBadgeContainer>
         )}
 
-        {/* 베스트 게시물 섹션 (전체글에서만 표시) */}
+        {/* 베스트 게시물 섹션 (전체글에서만 표시) - 암 관련 정보 제거 후 베스트 게시물로 복원 */}
         {selectedCategory === "all" &&
-          bestPosts.length > 0 &&
           !searchQuery.trim() &&
           selectedCancerType === "all" && (
             <BestPostsSection>
               <BestPostsTitle>베스트 게시글</BestPostsTitle>
-              <PostListContainer>
-                <PostTable>
-                  <TableHeader>
-                    <TableHeaderRow>
-                      <TableHeaderCell>카테고리</TableHeaderCell>
-                      <TableHeaderCell>제목</TableHeaderCell>
-                      <TableHeaderCell>작성자</TableHeaderCell>
-                      <TableHeaderCell>날짜</TableHeaderCell>
-                      <TableHeaderCell>조회</TableHeaderCell>
-                      <TableHeaderCell>좋아요</TableHeaderCell>
-                      <TableHeaderCell>댓글</TableHeaderCell>
-                    </TableHeaderRow>
-                  </TableHeader>
-                  <TableBody>
-                    {bestPosts.map((post) => {
-                      const categoryColors =
-                        theme.categoryColors[post.category] ||
-                        theme.categoryColors.all;
-                      const categoryIcon =
-                        theme.categoryIcons[post.category] ||
-                        theme.categoryIcons.all;
+              {bestPosts.length > 0 ? (
+                <PostListContainer>
+                  <PostTable>
+                    <TableHeader>
+                      <TableHeaderRow>
+                        <TableHeaderCell>카테고리</TableHeaderCell>
+                        <TableHeaderCell>제목</TableHeaderCell>
+                        <TableHeaderCell>작성자</TableHeaderCell>
+                        <TableHeaderCell>날짜</TableHeaderCell>
+                        <TableHeaderCell>조회</TableHeaderCell>
+                        <TableHeaderCell>좋아요</TableHeaderCell>
+                        <TableHeaderCell>댓글</TableHeaderCell>
+                      </TableHeaderRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bestPosts.map((post) => {
+                        const categoryColors =
+                          theme.categoryColors[post.category] ||
+                          theme.categoryColors.all;
+                        const categoryIcon =
+                          theme.categoryIcons[post.category] ||
+                          theme.categoryIcons.all;
 
-                      return (
-                        <TableRow
-                          key={post.id}
-                          onClick={() => handlePostClick(post.id)}
-                        >
-                          <TableCell>
-                            <CategoryBadge
-                              bgColor={categoryColors.bg}
-                              textColor={categoryColors.text}
-                              borderColor={categoryColors.border}
-                            >
-                              <span>{categoryIcon}</span>
-                              <span>
-                                {CATEGORY_LABELS[post.category] ||
-                                  post.category}
-                              </span>
-                            </CategoryBadge>
-                          </TableCell>
-                          <TableCell>
-                            <PostTitleLink>{post.title}</PostTitleLink>
-                          </TableCell>
-                          <TableCell>
-                            <AuthorCell>
-                              {post.authorName || "익명"}
-                              {post.authorIsMedicalStaff && (
-                                <MedicalStaffBadge />
-                              )}
-                            </AuthorCell>
-                          </TableCell>
-                          <TableCell>
-                            <DateCell>
-                              {formatRelativeTime(post.createdAt)}
-                            </DateCell>
-                          </TableCell>
-                          <TableCell>
-                            <StatCell type="views">
-                              {post.viewCount || 0}
-                            </StatCell>
-                          </TableCell>
-                          <TableCell>
-                            <StatCell type="likes">
-                              {post.likeCount || 0}
-                            </StatCell>
-                          </TableCell>
-                          <TableCell>
-                            <StatCell type="comments">
-                              {post.commentCount || 0}
-                            </StatCell>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </PostTable>
-              </PostListContainer>
+                        return (
+                          <TableRow
+                            key={post.id}
+                            onClick={() => handlePostClick(post.id)}
+                          >
+                            <TableCell>
+                              <CategoryBadge
+                                bgColor={categoryColors.bg}
+                                textColor={categoryColors.text}
+                                borderColor={categoryColors.border}
+                              >
+                                <span>{categoryIcon}</span>
+                                <span>
+                                  {CATEGORY_LABELS[post.category] ||
+                                    post.category}
+                                </span>
+                              </CategoryBadge>
+                            </TableCell>
+                            <TableCell>
+                              <PostTitleLink>{post.title}</PostTitleLink>
+                            </TableCell>
+                            <TableCell>
+                              <AuthorCell>
+                                {post.authorName || "익명"}
+                                {post.authorIsMedicalStaff && (
+                                  <MedicalStaffBadge />
+                                )}
+                              </AuthorCell>
+                            </TableCell>
+                            <TableCell>
+                              <DateCell>
+                                {formatRelativeTime(post.createdAt)}
+                              </DateCell>
+                            </TableCell>
+                            <TableCell>
+                              <StatCell type="views">
+                                {post.viewCount || 0}
+                              </StatCell>
+                            </TableCell>
+                            <TableCell>
+                              <StatCell type="likes">
+                                {post.likeCount || 0}
+                              </StatCell>
+                            </TableCell>
+                            <TableCell>
+                              <StatCell type="comments">
+                                {post.commentCount || 0}
+                              </StatCell>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </PostTable>
+                </PostListContainer>
+              ) : (
+                <div
+                  style={{
+                    padding: "2rem",
+                    textAlign: "center",
+                    color: "#6b7280",
+                  }}
+                >
+                  베스트 게시물이 없습니다.
+                </div>
+              )}
             </BestPostsSection>
-          )}
-
-        {/* 암 관련 정보 섹션 (전체글에서만 표시) */}
-        {selectedCategory === "all" &&
-          !searchQuery.trim() &&
-          selectedCancerType === "all" &&
-          bestPosts.length === 0 && (
-            <CancerInfoSection>
-              <CancerInfoTitle>암 관련 정보</CancerInfoTitle>
-              <CancerInfoGrid>
-                <CancerInfoCard>
-                  <CancerInfoCardTitle>암이란?</CancerInfoCardTitle>
-                  <CancerInfoCardText>
-                    암은 우리 몸의 정상 세포가 비정상적으로 변하여 무한히
-                    증식하고 주변 조직을 침범하는 질환입니다. 조기 발견과 치료가
-                    중요합니다.
-                  </CancerInfoCardText>
-                  <CancerInfoCardButton>자세히 보기</CancerInfoCardButton>
-                </CancerInfoCard>
-                <CancerInfoCard>
-                  <CancerInfoCardTitle>
-                    암 환자 치료 과정 한눈에 보기
-                  </CancerInfoCardTitle>
-                  <CancerInfoCardText>
-                    진단부터 치료 완료까지의 전 과정을 단계별로 안내합니다.
-                    수술, 항암치료, 방사선치료 등 각 치료 방법의 특징을
-                    이해하세요.
-                  </CancerInfoCardText>
-                  <CancerInfoCardButton>자세히 보기</CancerInfoCardButton>
-                </CancerInfoCard>
-                <CancerInfoCard>
-                  <CancerInfoCardTitle>
-                    암 환자를 위한 생활 팁
-                  </CancerInfoCardTitle>
-                  <CancerInfoCardText>
-                    치료 중과 회복 기간 동안의 영양 관리, 운동, 일상생활
-                    가이드라인을 제공합니다. 건강한 생활 습관이 회복에 도움이
-                    됩니다.
-                  </CancerInfoCardText>
-                  <CancerInfoCardButton>자세히 보기</CancerInfoCardButton>
-                </CancerInfoCard>
-              </CancerInfoGrid>
-            </CancerInfoSection>
           )}
 
         <SearchContainer>

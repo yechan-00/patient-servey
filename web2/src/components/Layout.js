@@ -1,6 +1,6 @@
 // src/components/Layout.js
 import React, { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -245,7 +245,6 @@ const ActionButtons = styled.div`
 
 function Layout({ children, title }) {
   const { currentUser, socialWorkerData, signOut } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -254,11 +253,29 @@ function Layout({ children, title }) {
     return location.pathname === path;
   };
 
+  // web5 로그인 페이지 URL 생성 함수
+  const getWeb5LoginUrl = () => {
+    // 로컬 환경인지 확인
+    const isLocalhost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1" ||
+      window.location.hostname === "";
+
+    if (isLocalhost) {
+      // 로컬 환경: web5는 일반적으로 3000번 포트에서 실행
+      return "http://localhost:3000/#/login";
+    }
+
+    // 프로덕션 환경
+    return "https://yechan-00.github.io/patient-servey/web5/#/login";
+  };
+
   // 로그아웃 처리
   const handleLogout = async () => {
     try {
       await signOut();
-      navigate("/login");
+      // web5 로그인 페이지로 리디렉션
+      window.location.href = getWeb5LoginUrl();
     } catch (error) {
       console.error("로그아웃 오류:", error);
     }

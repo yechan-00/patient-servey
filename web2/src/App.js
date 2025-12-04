@@ -1,5 +1,5 @@
 // src/App.js
-import React from "react";
+import React, { useEffect } from "react";
 import {
   HashRouter as Router,
   Routes,
@@ -16,14 +16,52 @@ import DashboardPage from "./pages/DashboardPage";
 import PatientDetailPage from "./pages/patient-detail/PatientDetailPage";
 import CounselingRecordPage from "./pages/CounselingRecordPage";
 import ArchivedPatientsPage from "./pages/ArchivedPatientsPage";
-import LoginPage from "./pages/LoginPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ProfilePage from "./pages/ProfilePage";
 import PatientsListPage from "./pages/PatientsListPage";
 
+// web5 로그인 페이지 URL 생성 함수
+function getWeb5LoginUrl() {
+  // 로컬 환경인지 확인
+  const isLocalhost =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1" ||
+    window.location.hostname === "";
+
+  if (isLocalhost) {
+    // 로컬 환경: web5는 일반적으로 3000번 포트에서 실행
+    // web2가 다른 포트에서 실행되더라도 web5는 3000번 포트로 가정
+    return "http://localhost:3000/#/login";
+  }
+
+  // 프로덕션 환경
+  return "https://yechan-00.github.io/patient-servey/web5/#/login";
+}
+
+// web5 로그인 페이지로 리디렉션하는 컴포넌트
+function RedirectToWeb5Login() {
+  useEffect(() => {
+    window.location.href = getWeb5LoginUrl();
+  }, []);
+  return null;
+}
+
 function PrivateRoute({ children }) {
-  const { currentUser } = useAuth();
-  return currentUser ? children : <Navigate to="/login" />;
+  const { currentUser, hardcodedUser, loading } = useAuth();
+
+  // 로딩 중이면 대기
+  if (loading) {
+    return null; // 또는 로딩 스피너 표시
+  }
+
+  // 로그인되지 않은 경우 web5 로그인 페이지로 리디렉션
+  // hardcodedUser도 확인 (web5의 localStorage에서 복원된 경우)
+  if (!currentUser && !hardcodedUser) {
+    window.location.href = getWeb5LoginUrl();
+    return null;
+  }
+
+  return children;
 }
 
 export default function App() {
@@ -34,7 +72,7 @@ export default function App() {
         <Router>
           <Routes>
             {/* 공개 경로 */}
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/login" element={<RedirectToWeb5Login />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
             {/* 보호 경로 */}

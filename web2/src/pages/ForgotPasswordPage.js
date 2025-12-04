@@ -1,8 +1,7 @@
 // src/pages/ForgotPasswordPage.js
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import styled from 'styled-components';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState } from "react";
+import styled from "styled-components";
+import { useAuth } from "../contexts/AuthContext";
 
 // 컨테이너
 const Container = styled.div`
@@ -68,7 +67,7 @@ const Input = styled.input`
   border: 1px solid #ced4da;
   border-radius: 4px;
   transition: border-color 0.15s ease-in-out;
-  
+
   &:focus {
     border-color: #2a5e8c;
     outline: none;
@@ -85,11 +84,11 @@ const Button = styled.button`
   font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.15s ease-in-out;
-  
+
   &:hover {
     background-color: #1d4269;
   }
-  
+
   &:disabled {
     background-color: #6c757d;
     cursor: not-allowed;
@@ -111,13 +110,14 @@ const SuccessMessage = styled.p`
 `;
 
 // 링크
-const StyledLink = styled(Link)`
+const StyledLink = styled.a`
   color: #2a5e8c;
   text-decoration: none;
   display: block;
   text-align: center;
   margin-top: 1.5rem;
-  
+  cursor: pointer;
+
   &:hover {
     text-decoration: underline;
   }
@@ -125,41 +125,60 @@ const StyledLink = styled(Link)`
 
 function ForgotPasswordPage() {
   const { resetPassword } = useAuth();
-  
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
+  // web5 로그인 페이지 URL 생성 함수
+  const getWeb5LoginUrl = () => {
+    // 로컬 환경인지 확인
+    const isLocalhost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1" ||
+      window.location.hostname === "";
+
+    if (isLocalhost) {
+      // 로컬 환경: web5는 일반적으로 3000번 포트에서 실행
+      return "http://localhost:3000/#/login";
+    }
+
+    // 프로덕션 환경
+    return "https://yechan-00.github.io/patient-servey/web5/#/login";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!email) {
-      return setError('이메일을 입력해주세요.');
+      return setError("이메일을 입력해주세요.");
     }
-    
+
     try {
-      setError('');
-      setSuccess('');
+      setError("");
+      setSuccess("");
       setLoading(true);
-      
+
       await resetPassword(email);
-      setSuccess('비밀번호 재설정 이메일을 발송했습니다. 이메일을 확인해주세요.');
+      setSuccess(
+        "비밀번호 재설정 이메일을 발송했습니다. 이메일을 확인해주세요."
+      );
     } catch (error) {
       console.error("비밀번호 재설정 오류:", error);
-      
-      if (error.code === 'auth/user-not-found') {
-        setError('해당 이메일을 가진 사용자를 찾을 수 없습니다.');
-      } else if (error.code === 'auth/invalid-email') {
-        setError('유효하지 않은 이메일 형식입니다.');
+
+      if (error.code === "auth/user-not-found") {
+        setError("해당 이메일을 가진 사용자를 찾을 수 없습니다.");
+      } else if (error.code === "auth/invalid-email") {
+        setError("유효하지 않은 이메일 형식입니다.");
       } else {
-        setError('비밀번호 재설정 중 오류가 발생했습니다. 다시 시도해주세요.');
+        setError("비밀번호 재설정 중 오류가 발생했습니다. 다시 시도해주세요.");
       }
     } finally {
       setLoading(false);
     }
   };
-  
+
   return (
     <Container>
       <Card>
@@ -167,7 +186,7 @@ function ForgotPasswordPage() {
           <LogoText>암 생존자 케어</LogoText>
           <Subtitle>비밀번호 재설정</Subtitle>
         </LogoArea>
-        
+
         <Form onSubmit={handleSubmit}>
           <FormGroup>
             <Label htmlFor="email">이메일</Label>
@@ -179,15 +198,17 @@ function ForgotPasswordPage() {
               placeholder="가입한 이메일 주소를 입력하세요"
             />
           </FormGroup>
-          
+
           {error && <ErrorMessage>{error}</ErrorMessage>}
           {success && <SuccessMessage>{success}</SuccessMessage>}
-          
+
           <Button type="submit" disabled={loading}>
-            {loading ? '처리 중...' : '비밀번호 재설정 메일 보내기'}
+            {loading ? "처리 중..." : "비밀번호 재설정 메일 보내기"}
           </Button>
-          
-          <StyledLink to="/login">로그인 페이지로 돌아가기</StyledLink>
+
+          <StyledLink href={getWeb5LoginUrl()}>
+            로그인 페이지로 돌아가기
+          </StyledLink>
         </Form>
       </Card>
     </Container>

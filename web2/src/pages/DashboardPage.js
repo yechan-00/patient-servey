@@ -848,6 +848,20 @@ function normalizePatientForUI(p = {}, u = {}) {
     u.smokingCessation ??
     "";
 
+  // 치료 상태 계산 (생존자 설문용)
+  let currentTreatment = "";
+  if (hasSurgery === "예" || hasSurgery === true) {
+    currentTreatment = "치료 중";
+  } else if (hasRecurrence === "예" || hasRecurrence === true) {
+    currentTreatment = "재발/추가 치료";
+  } else if (surgeryDate) {
+    // 수술일이 있으면 치료 완료로 간주
+    currentTreatment = "치료 완료";
+  } else if (diagnosisDate) {
+    // 진단일만 있으면 경과 확인 중
+    currentTreatment = "경과 확인 중";
+  }
+
   return {
     name,
     birthDate,
@@ -875,6 +889,7 @@ function normalizePatientForUI(p = {}, u = {}) {
     otherTreatmentType,
     alcoholAbstinence,
     smokingCessation,
+    currentTreatment,
   };
 }
 
@@ -1092,9 +1107,13 @@ function HeaderFilterPortal({
         padding: "8px",
       }}
     >
-      {options.map((option) => (
+      {options.map((option, index) => (
         <div
-          key={option.value}
+          key={
+            option.value !== null && option.value !== undefined
+              ? option.value
+              : `option-${index}`
+          }
           onClick={() => {
             onSelect?.(option.value);
             onClose?.();
@@ -1144,9 +1163,9 @@ function DashboardPage() {
   // eslint-disable-next-line no-unused-vars
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
-    riskLevel: "all",
-    cancerType: "all",
-    treatmentStatus: "all",
+    riskLevel: null, // "전체" 옵션 제거: null로 초기화
+    cancerType: null, // "전체" 옵션 제거: null로 초기화
+    treatmentStatus: null, // "전체" 옵션 제거: null로 초기화
     searchTerm: "",
   });
 
@@ -1157,9 +1176,50 @@ function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const patientsPerPage = 5; // 한 페이지당 5명의 환자만 표시
 
-  // 통합 모드: 설문 유형 선택 (기본값: "all" - 생존자와 환자 모두 표시)
-  const [surveyType, setSurveyType] = useState(SURVEY_TYPES.ALL);
-  const useIntegratedMode = surveyType !== SURVEY_TYPES.SURVIVOR; // 생존자만이면 기존 모드
+  // 통합 모드: 설문 유형 선택 (기본값: "survivor" - 생존자만 표시)
+  // "전체" 옵션 완전 제거: 항상 SURVIVOR 또는 PATIENT만 허용
+  const getInitialSurveyType = () => {
+    // localStorage에서 저장된 값 확인 (이전에 "all"이 저장되어 있을 수 있음)
+    try {
+      const saved = localStorage.getItem("dashboard_surveyType");
+      if (saved === SURVEY_TYPES.SURVIVOR || saved === SURVEY_TYPES.PATIENT) {
+        return saved;
+      }
+      // "all"이거나 유효하지 않은 값이면 삭제하고 SURVIVOR 반환
+      if (saved) {
+        localStorage.removeItem("dashboard_surveyType");
+      }
+    } catch (error) {
+      console.error("localStorage 읽기 실패:", error);
+    }
+    return SURVEY_TYPES.SURVIVOR;
+  };
+
+  const [surveyType, setSurveyType] = useState(getInitialSurveyType);
+
+  // "전체" 옵션 완전 제거: "all" 값이 들어오면 자동으로 "survivor"로 변경
+  // surveyType 변경 시 localStorage에도 저장 (유효한 값만)
+  useEffect(() => {
+    // 유효하지 않은 값이면 SURVIVOR로 강제 변경
+    if (
+      surveyType === "all" ||
+      !surveyType ||
+      (surveyType !== SURVEY_TYPES.SURVIVOR &&
+        surveyType !== SURVEY_TYPES.PATIENT)
+    ) {
+      setSurveyType(SURVEY_TYPES.SURVIVOR);
+      return;
+    }
+
+    // 유효한 값이면 localStorage에 저장
+    try {
+      localStorage.setItem("dashboard_surveyType", surveyType);
+    } catch (error) {
+      console.error("localStorage 저장 실패:", error);
+    }
+  }, [surveyType]);
+
+  const useIntegratedMode = surveyType === SURVEY_TYPES.PATIENT; // 환자만 통합 모드 사용
 
   // 보조 상태: 원본 patients와 최신 요청 맵을 분리 보관
   const [patientsRaw, setPatientsRaw] = useState([]);
@@ -1168,7 +1228,7 @@ function DashboardPage() {
   const [usersById, setUsersById] = useState(new Map());
   const [selectedIds, setSelectedIds] = useState(new Set());
 
-  // 통합 모드: 통합 users 구독 (환자 또는 전체 선택 시)
+  // 통합 모드: 암환자 users 구독 (patients_users 컬렉션)
   useEffect(() => {
     if (!useIntegratedMode) return;
 
@@ -1188,26 +1248,8 @@ function DashboardPage() {
       setUsersById(merged);
     };
 
-    // 생존자 users 구독
-    if (
-      surveyType === SURVEY_TYPES.ALL ||
-      surveyType === SURVEY_TYPES.SURVIVOR
-    ) {
-      const unsubSurvivors = onSnapshot(collection(db, "users"), (snap) => {
-        survivorsUsersMap = new Map();
-        snap.forEach((d) => {
-          survivorsUsersMap.set(d.id, d.data() || {});
-        });
-        mergeAndSet();
-      });
-      unsubscribers.push(unsubSurvivors);
-    }
-
-    // 환자 users 구독
-    if (
-      surveyType === SURVEY_TYPES.ALL ||
-      surveyType === SURVEY_TYPES.PATIENT
-    ) {
+    // 환자 users만 구독 (통합 모드는 환자일 때만 사용)
+    if (surveyType === SURVEY_TYPES.PATIENT) {
       const unsubPatients = onSnapshot(
         collection(db, "patients_users"),
         (snap) => {
@@ -1313,7 +1355,7 @@ function DashboardPage() {
     };
   }
 
-  // 통합 모드: 통합 환자 구독 (환자 또는 전체 선택 시)
+  // 통합 모드: 암환자 설문 구독 (patients_patients 컬렉션)
   useEffect(() => {
     if (!useIntegratedMode) return; // 생존자만이면 기존 useEffect 사용
 
@@ -1350,9 +1392,7 @@ function DashboardPage() {
         // 통계 계산 (통합 통계 사용)
         const stats = calculateIntegratedStats(processed);
         const targetStats =
-          surveyType === SURVEY_TYPES.ALL
-            ? stats.all
-            : surveyType === SURVEY_TYPES.SURVIVOR
+          surveyType === SURVEY_TYPES.SURVIVOR
             ? stats.survivors
             : stats.patients;
 
@@ -1671,8 +1711,11 @@ function DashboardPage() {
           }
         }
 
+        // 현재 표시 중인 환자 목록에 해당하는 상담 요청만 카운트
+        const patientIds = new Set(patients.map((p) => p.id));
         const pendingUsers = Array.from(latest.values()).filter(
-          (v) => (v.status || "pending") === "pending"
+          (v) =>
+            (v.status || "pending") === "pending" && patientIds.has(v.userId)
         ).length;
 
         setLatestRequestByUser(new Map(latest));
@@ -1684,7 +1727,7 @@ function DashboardPage() {
         );
       }
     })();
-  }, [surveyType, useIntegratedMode]);
+  }, [surveyType, useIntegratedMode, patients]);
 
   // 기존 모드: 생존자 상담 요청만 구독 (기존 로직 그대로 유지)
   // 실시간: counselingRequests (최근 요청/활동/대기 건수)
@@ -1735,10 +1778,15 @@ function DashboardPage() {
         }
 
         // Compute unique pending count from latest
+        // 현재 표시 중인 환자 목록에 해당하는 상담 요청만 카운트
+        const patientIds = new Set(patients.map((p) => p.id));
         let pendingUsers = 0;
         latest.forEach((v) => {
           const status = v.status || "pending";
-          if (status === "pending") pendingUsers += 1;
+          // 현재 표시 중인 환자 목록에 해당하는 상담 요청만 카운트
+          if (status === "pending" && patientIds.has(v.userId)) {
+            pendingUsers += 1;
+          }
         });
 
         console.log("[Dashboard] counselingRequests snapshot:", {
@@ -1762,7 +1810,7 @@ function DashboardPage() {
     );
 
     return () => unsubReq();
-  }, [useIntegratedMode]);
+  }, [useIntegratedMode, patients]);
 
   // latestRequestByUser 변경 시 pendingRequests 카운트 재계산
   // Map의 내용을 기반으로 한 키를 생성하여 변경 감지
@@ -1830,14 +1878,18 @@ function DashboardPage() {
     let filtered = [...patients];
 
     // 위험도 필터
-    if (filters.riskLevel !== "all") {
+    if (filters.riskLevel !== null && filters.riskLevel !== undefined) {
       filtered = filtered.filter(
         (patient) => patient.riskLevel === filters.riskLevel
       );
     }
 
-    // 암 종류 필터 - 이제 한글 값을 직접 비교
-    if (filters.cancerType !== "all") {
+    // 암 종류 필터 - 생존자 설문만 적용
+    if (
+      surveyType === SURVEY_TYPES.SURVIVOR &&
+      filters.cancerType !== null &&
+      filters.cancerType !== undefined
+    ) {
       filtered = filtered.filter((patient) => {
         // 한글 암 종류로 직접 비교
         if (filters.cancerType === "breast")
@@ -1858,8 +1910,12 @@ function DashboardPage() {
       });
     }
 
-    // 치료 상태 필터 - 한글 값 직접 비교 (null-safe)
-    if (filters.treatmentStatus !== "all") {
+    // 치료 상태 필터 - 생존자 설문만 적용
+    if (
+      surveyType === SURVEY_TYPES.SURVIVOR &&
+      filters.treatmentStatus !== null &&
+      filters.treatmentStatus !== undefined
+    ) {
       filtered = filtered.filter((patient) => {
         const ct = patient.currentTreatment || "";
         if (filters.treatmentStatus === "ongoing")
@@ -1885,7 +1941,7 @@ function DashboardPage() {
     setFilteredPatients(filtered);
     // 필터링이 변경될 때마다 첫 번째 페이지로 리셋
     setCurrentPage(1);
-  }, [filters, patients]);
+  }, [filters, patients, surveyType]);
 
   // 필터 변경 핸들러
   const handleFilterChange = (e) => {
@@ -2006,11 +2062,12 @@ function DashboardPage() {
         await deletePatientWithCascade(id);
       }
 
-      // UI 반영
+      // UI 반영 (patientsRaw도 함께 업데이트)
       setPatients((prev) => prev.filter((p) => !targetIds.includes(p.id)));
       setFilteredPatients((prev) =>
         prev.filter((p) => !targetIds.includes(p.id))
       );
+      setPatientsRaw((prev) => prev.filter((p) => !targetIds.includes(p.id)));
       setSelectedIds(new Set());
       alert("삭제가 완료되었습니다.");
     } catch (err) {
@@ -2244,12 +2301,29 @@ function DashboardPage() {
                   <FilterLabel htmlFor="surveyType">설문 유형:</FilterLabel>
                   <FilterSelect
                     id="surveyType"
-                    value={surveyType}
-                    onChange={(e) => setSurveyType(e.target.value)}
+                    value={
+                      surveyType === "all" ||
+                      (surveyType !== SURVEY_TYPES.SURVIVOR &&
+                        surveyType !== SURVEY_TYPES.PATIENT)
+                        ? SURVEY_TYPES.SURVIVOR
+                        : surveyType
+                    }
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      // "all" 값이 들어오면 무시하고 "survivor"로 설정
+                      if (
+                        newValue === "all" ||
+                        (newValue !== SURVEY_TYPES.SURVIVOR &&
+                          newValue !== SURVEY_TYPES.PATIENT)
+                      ) {
+                        setSurveyType(SURVEY_TYPES.SURVIVOR);
+                      } else {
+                        setSurveyType(newValue);
+                      }
+                    }}
                   >
                     <option value={SURVEY_TYPES.SURVIVOR}>생존자 설문</option>
-                    <option value={SURVEY_TYPES.PATIENT}>환자 설문</option>
-                    <option value={SURVEY_TYPES.ALL}>전체</option>
+                    <option value={SURVEY_TYPES.PATIENT}>암환자 설문</option>
                   </FilterSelect>
                 </FilterGroup>
 
@@ -2343,26 +2417,39 @@ function DashboardPage() {
                       />
                     </HeaderCell>
                     <HeaderCell>이름</HeaderCell>
-                    {useIntegratedMode && <HeaderCell>유형</HeaderCell>}
                     <HeaderCell>생년월일</HeaderCell>
-                    <FilterableHeaderCell
-                      data-role="header-filter-trigger"
-                      ref={(el) => {
-                        if (el) headerFilterRefs.current.set("cancerType", el);
-                        else headerFilterRefs.current.delete("cancerType");
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenHeaderFilter(
-                          openHeaderFilter === "cancerType"
-                            ? null
-                            : "cancerType"
-                        );
-                      }}
-                    >
-                      암 종류
-                    </FilterableHeaderCell>
-                    <HeaderCell>진단 시기</HeaderCell>
+                    {/* 생존자 설문: 암 종류, 진단 시기, 치료 상태 */}
+                    {surveyType === SURVEY_TYPES.SURVIVOR && (
+                      <>
+                        <FilterableHeaderCell
+                          data-role="header-filter-trigger"
+                          ref={(el) => {
+                            if (el)
+                              headerFilterRefs.current.set("cancerType", el);
+                            else headerFilterRefs.current.delete("cancerType");
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenHeaderFilter(
+                              openHeaderFilter === "cancerType"
+                                ? null
+                                : "cancerType"
+                            );
+                          }}
+                        >
+                          암 종류
+                        </FilterableHeaderCell>
+                        <HeaderCell>진단 시기</HeaderCell>
+                      </>
+                    )}
+                    {/* 암환자 설문: 응답자, 연락처, 의료보장 */}
+                    {surveyType === SURVEY_TYPES.PATIENT && (
+                      <>
+                        <HeaderCell>응답자</HeaderCell>
+                        <HeaderCell>연락처</HeaderCell>
+                        <HeaderCell>의료보장</HeaderCell>
+                      </>
+                    )}
                     <FilterableHeaderCell
                       data-role="header-filter-trigger"
                       ref={(el) => {
@@ -2380,24 +2467,28 @@ function DashboardPage() {
                     </FilterableHeaderCell>
                     <HeaderCell>상담 요청</HeaderCell>
                     <HeaderCell>상담 상태</HeaderCell>
-                    <FilterableHeaderCell
-                      data-role="header-filter-trigger"
-                      ref={(el) => {
-                        if (el)
-                          headerFilterRefs.current.set("treatmentStatus", el);
-                        else headerFilterRefs.current.delete("treatmentStatus");
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenHeaderFilter(
-                          openHeaderFilter === "treatmentStatus"
-                            ? null
-                            : "treatmentStatus"
-                        );
-                      }}
-                    >
-                      치료 상태
-                    </FilterableHeaderCell>
+                    {/* 생존자 설문만 치료 상태 표시 */}
+                    {surveyType === SURVEY_TYPES.SURVIVOR && (
+                      <FilterableHeaderCell
+                        data-role="header-filter-trigger"
+                        ref={(el) => {
+                          if (el)
+                            headerFilterRefs.current.set("treatmentStatus", el);
+                          else
+                            headerFilterRefs.current.delete("treatmentStatus");
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenHeaderFilter(
+                            openHeaderFilter === "treatmentStatus"
+                              ? null
+                              : "treatmentStatus"
+                          );
+                        }}
+                      >
+                        치료 상태
+                      </FilterableHeaderCell>
+                    )}
                     <FilterableHeaderCell
                       data-role="header-filter-trigger"
                       ref={(el) => {
@@ -2419,7 +2510,7 @@ function DashboardPage() {
                   {filteredPatients.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={useIntegratedMode ? 11 : 10}
+                        colSpan={surveyType === SURVEY_TYPES.SURVIVOR ? 10 : 9}
                         style={{ textAlign: "center" }}
                       >
                         {loading
@@ -2451,44 +2542,36 @@ function DashboardPage() {
                               {patient.name || "익명"}
                             </StyledLink>
                           </TableCell>
-                          {useIntegratedMode && (
-                            <TableCell>
-                              <Badge
-                                $variant={
-                                  patient.type === SURVEY_TYPES.PATIENT
-                                    ? "medium"
-                                    : "low"
-                                }
-                                style={{
-                                  backgroundColor:
-                                    patient.type === SURVEY_TYPES.PATIENT
-                                      ? "#fff3e0"
-                                      : "#e8f5e9",
-                                  border:
-                                    patient.type === SURVEY_TYPES.PATIENT
-                                      ? "1px solid #ffb74d"
-                                      : "1px solid #81c784",
-                                  color:
-                                    patient.type === SURVEY_TYPES.PATIENT
-                                      ? "#ef6c00"
-                                      : "#2e7d32",
-                                }}
-                              >
-                                {patient.type === SURVEY_TYPES.PATIENT
-                                  ? "환자"
-                                  : "생존자"}
-                              </Badge>
-                            </TableCell>
-                          )}
                           <TableCell>
                             {formatBirthDate(patient.birthDate)}
                           </TableCell>
-                          <TableCell>
-                            {patient.cancerType || "정보 없음"}
-                          </TableCell>
-                          <TableCell>
-                            {formatYearMonth(patient.diagnosisDate)}
-                          </TableCell>
+                          {/* 생존자 설문: 암 종류, 진단 시기 */}
+                          {surveyType === SURVEY_TYPES.SURVIVOR && (
+                            <>
+                              <TableCell>
+                                {patient.cancerType || "정보 없음"}
+                              </TableCell>
+                              <TableCell>
+                                {formatYearMonth(patient.diagnosisDate)}
+                              </TableCell>
+                            </>
+                          )}
+                          {/* 암환자 설문: 응답자, 연락처, 의료보장 */}
+                          {surveyType === SURVEY_TYPES.PATIENT && (
+                            <>
+                              <TableCell>
+                                {patient.respondent || "정보 없음"}
+                              </TableCell>
+                              <TableCell>
+                                {patient.phone ||
+                                  patient.contactMethod ||
+                                  "정보 없음"}
+                              </TableCell>
+                              <TableCell>
+                                {patient.insuranceType || "정보 없음"}
+                              </TableCell>
+                            </>
+                          )}
                           <TableCell>
                             <Badge $variant={patient.riskLevel}>
                               {patient.riskLevel === "high"
@@ -2582,17 +2665,22 @@ function DashboardPage() {
                               </div>
                             )}
                           </TableCell>
-                          <TableCell>
-                            {(() => {
-                              const ct = patient.currentTreatment || "";
-                              if (ct.includes("치료 중")) return "치료 중";
-                              if (ct.includes("치료 완료")) return "치료 완료";
-                              if (ct.includes("재발")) return "재발/추가 치료";
-                              if (ct.includes("경과 확인"))
-                                return "경과 확인 중";
-                              return ct || "정보 없음";
-                            })()}
-                          </TableCell>
+                          {/* 생존자 설문만 치료 상태 표시 */}
+                          {surveyType === SURVEY_TYPES.SURVIVOR && (
+                            <TableCell>
+                              {(() => {
+                                const ct = patient.currentTreatment || "";
+                                if (ct.includes("치료 중")) return "치료 중";
+                                if (ct.includes("치료 완료"))
+                                  return "치료 완료";
+                                if (ct.includes("재발"))
+                                  return "재발/추가 치료";
+                                if (ct.includes("경과 확인"))
+                                  return "경과 확인 중";
+                                return ct || "정보 없음";
+                              })()}
+                            </TableCell>
+                          )}
                           <TableCell style={{ textAlign: "center" }}>
                             <button
                               onClick={async (e) => {
@@ -2680,7 +2768,7 @@ function DashboardPage() {
                   options={
                     openHeaderFilter === "cancerType"
                       ? [
-                          { value: "all", label: "전체" },
+                          { value: null, label: "필터 해제" }, // "전체" 옵션 제거, 필터 해제 옵션 추가
                           { value: "breast", label: "유방암" },
                           { value: "colorectal", label: "대장암" },
                           { value: "lung", label: "폐암" },
@@ -2692,14 +2780,14 @@ function DashboardPage() {
                         ]
                       : openHeaderFilter === "riskLevel"
                       ? [
-                          { value: "all", label: "전체" },
+                          { value: null, label: "필터 해제" }, // "전체" 옵션 제거, 필터 해제 옵션 추가
                           { value: "high", label: "위험" },
                           { value: "medium", label: "주의" },
                           { value: "low", label: "양호" },
                         ]
                       : openHeaderFilter === "treatmentStatus"
                       ? [
-                          { value: "all", label: "전체" },
+                          { value: null, label: "필터 해제" }, // "전체" 옵션 제거, 필터 해제 옵션 추가
                           { value: "ongoing", label: "치료 중" },
                           { value: "completed", label: "치료 완료" },
                           { value: "recurrence", label: "재발/추가 치료" },

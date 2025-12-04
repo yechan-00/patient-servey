@@ -51,13 +51,13 @@ function normalizeRiskLevel(text) {
  * @returns {Promise<Array>} - { id, name, birthDate, ..., type: "survivor" | "patient" }
  */
 export async function getIntegratedPatients({
-  surveyType = SURVEY_TYPES.ALL,
+  surveyType = SURVEY_TYPES.SURVIVOR,
   includeArchived = false,
 } = {}) {
   const results = [];
 
   // 생존자 데이터 조회
-  if (surveyType === SURVEY_TYPES.ALL || surveyType === SURVEY_TYPES.SURVIVOR) {
+  if (surveyType === SURVEY_TYPES.SURVIVOR) {
     try {
       const survivorsRef = collection(db, COLLECTIONS.SURVIVORS.PATIENTS);
       const survivorsQuery = includeArchived
@@ -107,7 +107,7 @@ export async function getIntegratedPatients({
   }
 
   // 환자 데이터 조회
-  if (surveyType === SURVEY_TYPES.ALL || surveyType === SURVEY_TYPES.PATIENT) {
+  if (surveyType === SURVEY_TYPES.PATIENT) {
     try {
       const patientsRef = collection(db, COLLECTIONS.PATIENTS.PATIENTS);
       const patientsQuery = includeArchived
@@ -149,6 +149,11 @@ export async function getIntegratedPatients({
           createdAt,
           lastSurveyAt,
           type: SURVEY_TYPES.PATIENT, // 타입 구분 필드
+          // web3 설문에서 수집하는 정보
+          respondent: v.respondent ?? "",
+          phone: v.phone ?? "",
+          contactMethod: v.contactMethod ?? "",
+          insuranceType: v.insuranceType ?? "",
         });
       });
     } catch (error) {
@@ -168,7 +173,7 @@ export async function getIntegratedPatients({
  * @returns {() => void} unsubscribe 함수
  */
 export function subscribeIntegratedPatients(
-  { surveyType = SURVEY_TYPES.ALL, showArchived = false } = {},
+  { surveyType = SURVEY_TYPES.SURVIVOR, showArchived = false } = {},
   cb
 ) {
   const unsubscribers = [];
@@ -177,10 +182,7 @@ export function subscribeIntegratedPatients(
 
   // 두 구독을 합쳐서 처리하는 헬퍼
   const mergeAndCallback = () => {
-    if (surveyType === SURVEY_TYPES.ALL) {
-      // 전체 조회: 두 캐시 합치기
-      cb([...survivorsCache, ...patientsCache]);
-    } else if (surveyType === SURVEY_TYPES.SURVIVOR) {
+    if (surveyType === SURVEY_TYPES.SURVIVOR) {
       // 생존자만
       cb(survivorsCache);
     } else if (surveyType === SURVEY_TYPES.PATIENT) {
@@ -190,7 +192,7 @@ export function subscribeIntegratedPatients(
   };
 
   // 생존자 구독
-  if (surveyType === SURVEY_TYPES.ALL || surveyType === SURVEY_TYPES.SURVIVOR) {
+  if (surveyType === SURVEY_TYPES.SURVIVOR) {
     const survivorsRef = collection(db, COLLECTIONS.SURVIVORS.PATIENTS);
     const survivorsQuery = showArchived
       ? survivorsRef
@@ -236,7 +238,7 @@ export function subscribeIntegratedPatients(
   }
 
   // 환자 구독
-  if (surveyType === SURVEY_TYPES.ALL || surveyType === SURVEY_TYPES.PATIENT) {
+  if (surveyType === SURVEY_TYPES.PATIENT) {
     const patientsRef = collection(db, COLLECTIONS.PATIENTS.PATIENTS);
     const patientsQuery = showArchived
       ? patientsRef
@@ -274,6 +276,11 @@ export function subscribeIntegratedPatients(
           createdAt,
           lastSurveyAt,
           type: SURVEY_TYPES.PATIENT,
+          // web3 설문에서 수집하는 정보
+          respondent: v.respondent ?? "",
+          phone: v.phone ?? "",
+          contactMethod: v.contactMethod ?? "",
+          insuranceType: v.insuranceType ?? "",
         };
       });
       mergeAndCallback();
@@ -294,12 +301,12 @@ export function subscribeIntegratedPatients(
  * @returns {Promise<Array>}
  */
 export async function getIntegratedCounselingRequests({
-  surveyType = SURVEY_TYPES.ALL,
+  surveyType = SURVEY_TYPES.SURVIVOR,
 } = {}) {
   const results = [];
 
   // 생존자 상담 요청
-  if (surveyType === SURVEY_TYPES.ALL || surveyType === SURVEY_TYPES.SURVIVOR) {
+  if (surveyType === SURVEY_TYPES.SURVIVOR) {
     try {
       const survivorsRef = collection(
         db,
@@ -323,7 +330,7 @@ export async function getIntegratedCounselingRequests({
   }
 
   // 환자 상담 요청
-  if (surveyType === SURVEY_TYPES.ALL || surveyType === SURVEY_TYPES.PATIENT) {
+  if (surveyType === SURVEY_TYPES.PATIENT) {
     try {
       const patientsRef = collection(
         db,

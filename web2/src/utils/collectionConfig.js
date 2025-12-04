@@ -31,7 +31,7 @@ export const COLLECTIONS = {
 export const SURVEY_TYPES = {
   SURVIVOR: "survivor", // 생존자 설문 (web1)
   PATIENT: "patient", // 환자 설문 (web3)
-  ALL: "all", // 전체
+  // "전체" 옵션 제거됨
 };
 
 const collectionConfig = {
