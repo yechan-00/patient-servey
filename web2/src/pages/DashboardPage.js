@@ -1,5 +1,5 @@
 // src/pages/DashboardPage.js
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
@@ -1812,45 +1812,9 @@ function DashboardPage() {
     return () => unsubReq();
   }, [useIntegratedMode, patients]);
 
-  // latestRequestByUser 변경 시 pendingRequests 카운트 재계산
-  // Map의 내용을 기반으로 한 키를 생성하여 변경 감지
-  const latestRequestKey = useMemo(() => {
-    const entries = Array.from(latestRequestByUser.entries())
-      .map(([k, v]) => `${k}:${v.status || "pending"}`)
-      .sort()
-      .join("|");
-    return `${latestRequestByUser.size}|${entries}`;
-  }, [latestRequestByUser]);
-
-  useEffect(() => {
-    let pendingCount = 0;
-    latestRequestByUser.forEach((v) => {
-      const status = v.status || "pending";
-      if (status === "pending") {
-        pendingCount += 1;
-      }
-    });
-    console.log(
-      "[Dashboard] latestRequestByUser changed, recalculating pending:",
-      {
-        mapSize: latestRequestByUser.size,
-        pendingCount,
-        key: latestRequestKey,
-      }
-    );
-    setStatsData((prev) => {
-      if (prev.pendingRequests !== pendingCount) {
-        console.log(
-          "[Dashboard] Updating pendingRequests:",
-          prev.pendingRequests,
-          "->",
-          pendingCount
-        );
-        return { ...prev, pendingRequests: pendingCount };
-      }
-      return prev;
-    });
-  }, [latestRequestKey, latestRequestByUser]);
+  // latestRequestByUser 변경 시 pendingRequests 카운트 재계산 제거
+  // onSnapshot에서 직접 업데이트하므로 중복 업데이트 방지
+  // 이 useEffect는 제거하여 깜빡임 문제 해결
 
   // 파생: patientsRaw + latestRequestByUser -> patients / filteredPatients
   useEffect(() => {
@@ -2878,8 +2842,6 @@ function DashboardPage() {
                   if (latestPrev) {
                     prevRawStatus = latestPrev.status || "pending";
                     const nextRawStatus = uiToRawRequestStatus(nextUi);
-                    const wasPending = prevRawStatus === "pending";
-                    const isPending = nextRawStatus === "pending";
 
                     // Map을 새로 생성하여 참조 변경 (React가 변경 감지하도록)
                     setLatestRequestByUser((prev) => {
@@ -2891,24 +2853,9 @@ function DashboardPage() {
                       return next;
                     });
 
-                    // 상담 상태 변경 시 즉시 카운트 업데이트
-                    if (wasPending !== isPending) {
-                      setStatsData((prev) => {
-                        const newCount = isPending
-                          ? prev.pendingRequests + 1
-                          : Math.max(0, prev.pendingRequests - 1);
-                        console.log(
-                          "[StatusSelect] Updating pendingRequests:",
-                          {
-                            wasPending,
-                            isPending,
-                            oldCount: prev.pendingRequests,
-                            newCount,
-                          }
-                        );
-                        return { ...prev, pendingRequests: newCount };
-                      });
-                    }
+                    // 상담 상태 변경 시 즉시 카운트 업데이트 제거
+                    // onSnapshot이 자동으로 업데이트하므로 중복 업데이트 방지
+                    // 깜빡임 문제 해결을 위해 여기서는 업데이트하지 않음
                   }
 
                   setOpenStatusMenuId(null);

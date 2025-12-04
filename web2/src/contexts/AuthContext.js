@@ -160,13 +160,17 @@ export function AuthProvider({ children }) {
   // localStorage에서 하드코딩된 사용자 정보 복원
   // web5의 localStorage("user")도 확인하여 medical 사용자 정보 동기화
   useEffect(() => {
+    let isMounted = true;
     try {
       // web2의 localStorage 확인
       const savedUser = localStorage.getItem(STORAGE_KEY);
       if (savedUser) {
         const parsedUser = JSON.parse(savedUser);
         if (parsedUser && parsedUser.username && parsedUser.role) {
-          setHardcodedUser(parsedUser);
+          if (isMounted) {
+            setHardcodedUser(parsedUser);
+            setLoading(false); // localStorage 확인 완료
+          }
           return; // web2의 localStorage에 있으면 그것을 사용
         } else {
           localStorage.removeItem(STORAGE_KEY);
@@ -183,18 +187,32 @@ export function AuthProvider({ children }) {
           parsedWeb5User.role === "medical"
         ) {
           // web5에서 medical로 로그인한 경우, web2의 localStorage에도 저장
-          setHardcodedUser(parsedWeb5User);
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsedWeb5User));
-          } catch (error) {
-            console.error("localStorage 저장 실패:", error);
+          if (isMounted) {
+            setHardcodedUser(parsedWeb5User);
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(parsedWeb5User));
+            } catch (error) {
+              console.error("localStorage 저장 실패:", error);
+            }
+            setLoading(false); // localStorage 확인 완료
           }
+          return;
         }
       }
+
+      // localStorage에 사용자 정보가 없으면 Firebase 인증 상태를 기다림
+      // (아래 useEffect에서 처리)
     } catch (error) {
       console.error("사용자 정보 복원 실패:", error);
       localStorage.removeItem(STORAGE_KEY);
+      if (isMounted) {
+        setLoading(false); // 에러 발생 시에도 로딩 종료
+      }
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // 인증 상태 변경 감지
@@ -211,13 +229,15 @@ export function AuthProvider({ children }) {
         setSocialWorkerData(null);
       }
       // Firebase 인증 상태 확인 완료 후 로딩 종료
-      // localStorage 확인은 이미 완료되었으므로 여기서 로딩 종료
-      setLoading(false);
+      // hardcodedUser가 없을 때만 로딩 종료 (있으면 이미 위에서 종료됨)
+      if (!hardcodedUser) {
+        setLoading(false);
+      }
     });
 
     // 정리 함수
     return unsubscribe;
-  }, []);
+  }, [hardcodedUser]);
 
   // 컨텍스트 값
   // currentUser 또는 hardcodedUser가 있으면 인증된 것으로 간주
