@@ -57,6 +57,14 @@ jobs:
         run: CI=false npm run build
         working-directory: ./web4
 
+      - name: Install web5 dependencies
+        run: npm install --legacy-peer-deps
+        working-directory: ./web5
+
+      - name: Build web5
+        run: CI=false npm run build
+        working-directory: ./web5
+
       - name: Collate build outputs
         run: |
           mkdir -p dist
@@ -98,6 +106,16 @@ jobs:
             cp -r web4/dist dist/web4
           else
             echo "Error: web4 build output directory not found"
+            exit 1
+          fi
+
+          echo "Copying web5 build output..."
+          if [ -d "web5/build" ]; then
+            cp -r web5/build dist/web5
+          elif [ -d "web5/dist" ]; then
+            cp -r web5/dist dist/web5
+          else
+            echo "Error: web5 build output directory not found"
             exit 1
           fi
 
