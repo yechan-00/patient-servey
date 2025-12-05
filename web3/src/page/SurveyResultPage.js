@@ -313,7 +313,16 @@ const SurveyResultPage = () => {
       >
         <Button
           variant="outlined"
-          onClick={() => navigate("/")}
+          onClick={() => {
+            const isLocalhost =
+              window.location.hostname === "localhost" ||
+              window.location.hostname === "127.0.0.1" ||
+              window.location.hostname === "";
+            const dashboardUrl = isLocalhost
+              ? "http://localhost:3001/#/"
+              : "https://yechan-00.github.io/patient-servey/web2/#/";
+            window.location.href = dashboardUrl;
+          }}
           sx={{
             px: { xs: 3, sm: 6 },
             py: 2,
@@ -322,7 +331,7 @@ const SurveyResultPage = () => {
             borderRadius: 1,
           }}
         >
-          홈으로 가기
+          대시보드로 가기
         </Button>
         <Button
           variant="contained"

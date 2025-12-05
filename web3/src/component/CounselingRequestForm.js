@@ -129,7 +129,15 @@ const CounselingRequestForm = () => {
   };
 
   const handleGoHome = () => {
-    navigate("/");
+    // web2 대시보드로 리디렉션
+    const isLocalhost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1" ||
+      window.location.hostname === "";
+    const dashboardUrl = isLocalhost
+      ? "http://localhost:3001/#/" // 로컬 환경 (web2 포트)
+      : "https://yechan-00.github.io/patient-servey/web2/#/"; // 프로덕션 환경
+    window.location.href = dashboardUrl;
   };
 
   if (submitted) {
@@ -164,7 +172,7 @@ const CounselingRequestForm = () => {
             onClick={handleGoHome}
             fullWidth
           >
-            홈으로 가기
+            대시보드로 가기
           </Button>
         </Paper>
       </Box>
@@ -291,7 +299,7 @@ const CounselingRequestForm = () => {
                 onClick={handleGoHome}
                 disabled={loading}
               >
-                홈으로 가기
+                대시보드로 가기
               </Button>
               <Button
                 type="submit"
