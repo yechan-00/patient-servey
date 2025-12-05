@@ -1,4 +1,4 @@
-// src/pages/SurveyResultPage.jsx
+// src/pages/SurveyResultPage.js
 import React, { useEffect, useState } from "react";
 import {
   Box,
@@ -9,7 +9,6 @@ import {
 } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import SurveyResult from "../component/SurveyResult";
-import * as SurveyUtils from "../utils/SurveyUtils";
 import {
   saveSurveyScores,
   saveSurveySnapshot,
@@ -17,218 +16,179 @@ import {
   savePatientSnapshot,
 } from "../utils/firebaseUtils";
 
-const labelMap = {
-  physicalChange: "암 이후 내 몸의 변화",
-  healthManagement: "건강한 삶을 위한 관리",
-  socialSupport: "회복을 도와주는 사람들",
-  psychologicalBurden: "심리적 부담",
-  socialBurden: "사회적 삶의 부담",
-  resilience: "암 이후 탄력성",
-};
-
-const sectionIds = {
-  physicalChange: ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8"],
-  healthManagement: ["q9", "q10", "q11", "q12", "q13"],
-  socialSupport: ["q14", "q15", "q16", "q17"],
-  psychologicalBurden: ["q18", "q19", "q20", "q21", "q22", "q23", "q24", "q25"],
-  socialBurden: ["q26", "q27", "q28"],
-  resilience: ["q29", "q30", "q31"],
-};
-
-// overallRiskGroup(국문) → riskLevel(high/medium/low) 매핑
-const mapRiskLevel = (group) => {
-  const s = String(group || "").trim();
-  if (s.includes("위험")) return "high";
-  if (s.includes("주의")) return "medium";
-  if (s.includes("양호")) return "low";
-  return "low";
-};
-
 // 이름+생년월일 기반으로 브라우저 crypto를 이용해 안정적인 환자 ID 생성
 async function makeStablePatientId(name, birthDate) {
   try {
-    const text = `${(name || "").trim()}|${(birthDate || "").trim()}`; // 예: "한영준|1990-01-01"
+    const text = `${(name || "").trim()}|${(birthDate || "").trim()}`;
     const enc = new TextEncoder().encode(text);
     const buf = await crypto.subtle.digest("SHA-1", enc);
     const hex = Array.from(new Uint8Array(buf))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
-    return `p-${hex.slice(0, 16)}`; // p-xxxxxxxxxxxxxxxx (항상 동일)
+    return `p-${hex.slice(0, 16)}`;
   } catch (e) {
-    // crypto 불가 환경 대비: 타임스탬프 폴백
     return `p-${Date.now()}`;
   }
 }
+
+// Section1 점수 계산 (예=1, 아니오=0)
+const calculateSection1Score = (section1Answers) => {
+  let yesCount = 0;
+  const questionIds = ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12"];
+  
+  questionIds.forEach((qId) => {
+    if (section1Answers[qId] === "예") {
+      yesCount++;
+    }
+  });
+
+  return {
+    total: yesCount,
+    isHighRisk: yesCount >= 5,
+  };
+};
+
+// Section2 카테고리별 위험 판단
+const calculateSection2Risks = (answers, section1Answers) => {
+  const risks = {};
+
+  // Section1 답변에 따른 카테고리 활성화 여부
+  const showCategory = {
+    재정: section1Answers.q1 === "예" || section1Answers.q7 === "예",
+    사회적고립: section1Answers.q2 === "예",
+    정신건강: section1Answers.q3 === "예",
+    주거: section1Answers.q4 === "예",
+    음식: section1Answers.q5 === "예",
+    교통: section1Answers.q6 === "예",
+    정보이해: section1Answers.q8 === "예",
+    폭력: section1Answers.q9 === "예",
+    고용: section1Answers.q10 === "예",
+    사회적지원: section1Answers.q11 === "예",
+    돌봄책임: section1Answers.q12 === "예",
+  };
+
+  // 각 카테고리별 위험 판단
+  if (showCategory.재정) {
+    const incomeRisk = ["lt40", "lt50", "lt75"].includes(answers.q1);
+    const paymentRisk = answers.q2 && Array.isArray(answers.q2) && 
+      answers.q2.length > 0 && !answers.q2.every(v => v === "none");
+    risks.재정 = incomeRisk || paymentRisk;
+  }
+
+  if (showCategory.사회적고립) {
+    const q3Risk = ["often", "always"].includes(answers.q3);
+    const q4Risk = answers.q4 === "m1";
+    risks.사회적고립 = q3Risk || q4Risk;
+  }
+
+  if (showCategory.정신건강) {
+    const score = parseInt(answers.q5) || 0;
+    risks.정신건강 = score >= 6;
+  }
+
+  if (showCategory.주거) {
+    const housingRiskValues = ["relativeTemp", "shelter", "facility"];
+    const q6Risk = housingRiskValues.includes(answers.q6);
+    const q7Risk = answers.q7 === "Y";
+    risks.주거 = q6Risk || q7Risk;
+  }
+
+  if (showCategory.음식) {
+    risks.음식 = answers.q7_food === "N";
+  }
+
+  if (showCategory.교통) {
+    const transportRisk = answers.q8 && Array.isArray(answers.q8) && 
+      answers.q8.length > 0 && !answers.q8.every(v => v === "none");
+    risks.교통 = transportRisk;
+  }
+
+  if (showCategory.정보이해) {
+    const eduRisk = ["무학", "초졸", "중졸"].includes(answers.q9);
+    const readRisk = ["2", "3", "4"].includes(answers.q10);
+    const digitalRisk = answers.q11 === "제한적";
+    risks.정보이해 = eduRisk || readRisk || digitalRisk;
+  }
+
+  if (showCategory.폭력) {
+    const noViolence = "없다";
+    const q12Risk = answers.q12 && answers.q12 !== noViolence;
+    const q13Risk = answers.q13 && answers.q13 !== noViolence;
+    const q14Risk = answers.q14 && answers.q14 !== noViolence;
+    risks.폭력 = q12Risk || q13Risk || q14Risk;
+  }
+
+  if (showCategory.고용) {
+    let employmentRisk = false;
+    if (answers.q15 === "working") {
+      const riskDetails = ["leave_or_sick", "contract_end", "quit_planned"];
+      employmentRisk = riskDetails.includes(answers.q15_working_detail);
+    } else if (answers.q15 === "notWorking") {
+      const riskReasons = ["quit_after_dx", "other"];
+      employmentRisk = riskReasons.includes(answers.q15_notWorking_reasons);
+    }
+    risks.고용 = employmentRisk;
+  }
+
+  if (showCategory.사회적지원) {
+    const q16Risk = answers.q16 === "N";
+    const q17Risk = answers.q17 === "N";
+    risks.사회적지원 = q16Risk || q17Risk;
+  }
+
+  if (showCategory.돌봄책임) {
+    risks.돌봄책임 = answers.q18 === "Y";
+  }
+
+  return risks;
+};
 
 const SurveyResultPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [resultData, setResultData] = useState(null);
 
   const answers = location.state?.answers || {};
-  const userName =
-    location.state?.name || localStorage.getItem("userName") || "";
+  const section1Answers = location.state?.section1Answers || 
+    JSON.parse(localStorage.getItem("section1Answers") || "{}");
+  const userName = location.state?.name || localStorage.getItem("userName") || "";
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const calculateResults = async () => {
+    const saveResults = async () => {
       try {
         setIsLoading(true);
-        console.log(
-          "Starting result calculation with answers:",
-          JSON.stringify(answers, null, 2)
-        );
 
-        // 답변이 없는 경우 에러 처리
-        if (Object.keys(answers).length === 0) {
-          throw new Error(
-            "설문 답변을 찾을 수 없습니다. 설문을 다시 진행해주세요."
-          );
-        }
-
-        // 1. 역코딩 적용
-        const reversed = SurveyUtils.applyReverseScore(answers);
-        console.log("Reversed scores:", JSON.stringify(reversed, null, 2));
-
-        // 2. 영역별 합계(원점수) 및 3. 평균 산출 (미응답 제외)
-        const rawScores = {};
-        const meanScores = {};
-
-        Object.entries(sectionIds).forEach(([key, ids]) => {
-          // 실제 응답(숫자)만 추출
-          const validAnswers = ids
-            .map((id) => reversed[id])
-            .filter((v) => typeof v === "number" && !isNaN(v));
-
-          rawScores[key] = validAnswers.reduce((sum, v) => sum + v, 0);
-          meanScores[key] =
-            validAnswers.length > 0
-              ? rawScores[key] / validAnswers.length
-              : null;
-        });
-
-        console.log("Raw scores:", JSON.stringify(rawScores, null, 2));
-        console.log("Mean scores:", JSON.stringify(meanScores, null, 2));
-
-        // 섹션별 원점수 평균으로 집단 분류
-        const riskGroups = {};
-        Object.entries(meanScores).forEach(([key, mean]) => {
-          riskGroups[key] =
-            typeof mean === "number" && !isNaN(mean)
-              ? SurveyUtils.getRiskGroup(labelMap[key], mean)
-              : "-";
-        });
-        console.log("Risk groups:", JSON.stringify(riskGroups, null, 2));
-
-        // 4. z-score(T-score) 변환 (미응답은 '-')
-        const stdScores = {};
-        Object.entries(meanScores).forEach(([key, mean]) => {
-          const sectionName = labelMap[key];
-          stdScores[key] =
-            typeof mean === "number" && !isNaN(mean)
-              ? SurveyUtils.newScore(sectionName, mean)
-              : "-";
-        });
-        console.log("Std scores:", JSON.stringify(stdScores, null, 2));
-
-        // 전체 평균 **Mean-점수** → 집단 분류 → 템플릿 문구 (미응답 섹션 제외)
-        const validMeans = Object.values(meanScores).filter(
-          (v) => typeof v === "number" && !isNaN(v)
-        );
-        const overallMean =
-          validMeans.length > 0
-            ? validMeans.reduce((a, b) => a + b, 0) / validMeans.length
-            : null;
-
-        console.log("Overall mean:", overallMean);
-
-        const overallRiskGroup =
-          typeof overallMean === "number" && !isNaN(overallMean)
-            ? SurveyUtils.getRiskGroup(
-                "전체 평균 (암 생존자 건강관리)",
-                overallMean
-              )
-            : "-";
-
-        console.log("Overall risk group:", overallRiskGroup);
-
-        const overallFeedback =
-          typeof overallMean === "number" && !isNaN(overallMean)
-            ? SurveyUtils.getPatientComment(overallRiskGroup)
-            : "해당 영역(섹션)은 응답하지 않아 점수 산출이 불가합니다.";
-
-        console.log("Overall feedback:", overallFeedback);
-
-        // 추가 피드백
-        const additionalComments = SurveyUtils.getAdditionalFeedback(
-          answers,
-          meanScores,
-          riskGroups
-        );
-
-        // 모든 섹션 key 목록 (응답 여부와 무관하게)
-        const allSectionKeys = Object.keys(sectionIds);
-
-        // 전달용 객체를 allSectionKeys 기준으로 재구성 (값이 없으면 0)
-        const filtered = (src) =>
-          Object.fromEntries(allSectionKeys.map((k) => [k, src[k] ?? 0]));
-
-        const calculatedData = {
-          rawScores: filtered(rawScores),
-          meanScores: filtered(meanScores),
-          stdScores: filtered(stdScores),
-          riskGroups: filtered(riskGroups),
-          overallMean,
-          overallRiskGroup,
-          overallFeedback,
-          additionalFeedback: additionalComments,
-          answers,
-        };
-
-        setResultData(calculatedData);
+        // Section1 점수 계산
+        const section1Result = calculateSection1Score(section1Answers);
+        
+        // Section2 위험 요인 계산
+        const section2Risks = calculateSection2Risks(answers, section1Answers);
+        const riskCategories = Object.entries(section2Risks)
+          .filter(([_, isRisk]) => isRisk)
+          .map(([category]) => category);
 
         // Firebase에 결과 저장 (사용자명이 있는 경우에만)
         if (userName) {
-          // 설문 시작 시 입력했던 메타값: state 우선 → localStorage 보조
-          const nameVal =
-            userName || localStorage.getItem("userName") || "익명";
-          const birthDateVal =
-            location.state?.birthDate ||
-            localStorage.getItem("birthDate") ||
-            "";
-          const cancerTypeVal =
-            location.state?.cancerType ||
-            localStorage.getItem("cancerType") ||
-            "";
-          const diagnosisDateVal =
-            location.state?.diagnosisDate ||
-            localStorage.getItem("diagnosisDate") ||
-            "";
+          const nameVal = userName || localStorage.getItem("userName") || "익명";
+          const birthDateVal = location.state?.birthDate || localStorage.getItem("birthDate") || "";
+          const cancerTypeVal = location.state?.cancerType || localStorage.getItem("cancerType") || "";
+          const diagnosisDateVal = location.state?.diagnosisDate || localStorage.getItem("diagnosisDate") || "";
 
-          // 우선순위: 라우팅 state → localStorage → (이름+생일 해시)
-          /**
-           * ID 통일 원칙:
-           * - 설문 결과는 로그인 여부와 무관하게 동일한 patientId에 적재되도록 한다.
-           * - patientId는 라우팅 state/localStorage에 이미 존재하면 그대로 재사용
-           * - 없으면 (이름+생년월일) 해시로 안정적인 ID 생성
-           */
-          const pidFromState =
-            location.state?.patientId ||
-            localStorage.getItem("patientId") ||
-            "";
-          const patientId =
-            pidFromState || (await makeStablePatientId(nameVal, birthDateVal));
-          // 로컬에 보관(후속 단계/결과 페이지/대시보드와 연결 유지)
+          const pidFromState = location.state?.patientId || localStorage.getItem("patientId") || "";
+          const patientId = pidFromState || (await makeStablePatientId(nameVal, birthDateVal));
+          
           try {
             localStorage.setItem("patientId", patientId);
           } catch (e) {
-            // localStorage 접근 불가한 환경 대비: 무시
+            // localStorage 접근 불가한 환경 대비
           }
 
+          // 위험 수준 결정
+          const riskLevel = section1Result.isHighRisk ? "high" : 
+            riskCategories.length > 0 ? "medium" : "low";
+
           try {
-            const riskLevel = mapRiskLevel(overallRiskGroup);
             await savePatientSnapshot(patientId, {
               name: nameVal,
               birthDate: birthDateVal,
@@ -238,72 +198,59 @@ const SurveyResultPage = () => {
               counselingStatus: "미요청",
               archived: false,
             });
-            console.log("[patients] snapshot saved:", patientId, {
+
+            const scoresToSave = {
+              section1Score: section1Result.total,
+              section1IsHighRisk: section1Result.isHighRisk,
+              section2Risks: section2Risks,
+              riskCategories: riskCategories,
+              riskLevel,
+            };
+
+            const snapshotData = {
+              section1Answers,
+              section2Answers: answers,
+              section1Score: section1Result.total,
+              section1IsHighRisk: section1Result.isHighRisk,
+              section2Risks,
+              riskCategories,
+              createdAt: new Date().toISOString(),
+            };
+
+            const summary = {
+              lastSurveyCompletedAt: new Date().toISOString(),
+              lastSection1Score: section1Result.total,
+              lastSection1IsHighRisk: section1Result.isHighRisk,
+              lastRiskCategories: riskCategories,
+              lastRiskLevel: riskLevel,
+            };
+
+            await saveSurveySnapshot(patientId, snapshotData);
+            await saveSurveySummary(patientId, summary);
+            await saveSurveyScores(patientId, scoresToSave, {
               name: nameVal,
               birthDate: birthDateVal,
               cancerType: cancerTypeVal,
               diagnosisDate: diagnosisDateVal,
-              riskLevel,
+              requestCounseling: false,
             });
+
+            console.log("Survey results saved successfully");
           } catch (e) {
-            console.error("savePatientSnapshot 호출 실패:", e);
-            // 스냅샷 저장 실패는 결과 표시 자체를 막지 않도록 진행
+            console.error("Error saving survey results:", e);
           }
-
-          const scoresToSave = {
-            stdScores: filtered(stdScores),
-            meanScores: filtered(meanScores),
-            riskGroups: filtered(riskGroups),
-            overallMean,
-            overallRiskGroup,
-            overallFeedback,
-            additionalFeedback: additionalComments,
-          };
-
-          // 1) 개별 설문 스냅샷 저장 (원자료 중심)
-          const snapshotData = {
-            answers,
-            meanScores: filtered(meanScores),
-            stdScores: filtered(stdScores),
-            riskGroups: filtered(riskGroups),
-            overallMean,
-            overallRiskGroup,
-            overallFeedback,
-            createdAt: new Date().toISOString(),
-          };
-
-          // 2) 요약본 업데이트 (최근 값만)
-          const summary = {
-            lastSurveyCompletedAt: new Date().toISOString(),
-            lastOverallMean: overallMean,
-            lastOverallRiskGroup: overallRiskGroup,
-            lastOverallFeedback: overallFeedback,
-          };
-
-          await saveSurveySnapshot(patientId, snapshotData);
-          await saveSurveySummary(patientId, summary);
-          await saveSurveyScores(patientId, scoresToSave, {
-            name: nameVal,
-            birthDate: birthDateVal,
-            cancerType: cancerTypeVal,
-            diagnosisDate: diagnosisDateVal,
-            requestCounseling: false,
-          });
-          console.log(
-            "Survey snapshot, summary, and scores saved successfully"
-          );
         }
 
         setIsLoading(false);
       } catch (err) {
-        console.error("Error calculating results:", err);
-        setError(err.message || "결과를 계산하는 중 오류가 발생했습니다.");
+        console.error("Error in result page:", err);
+        setError(err.message || "결과를 처리하는 중 오류가 발생했습니다.");
         setIsLoading(false);
       }
     };
 
-    calculateResults();
-  }, [answers, userName]);
+    saveResults();
+  }, [answers, section1Answers, userName, location.state]);
 
   // 로딩 중 화면
   if (isLoading) {
@@ -353,14 +300,8 @@ const SurveyResultPage = () => {
   return (
     <Box p={4}>
       <SurveyResult
-        rawScores={resultData.rawScores}
-        meanScores={resultData.meanScores}
-        stdScores={resultData.stdScores}
-        riskGroups={resultData.riskGroups}
-        overallFeedback={resultData.overallFeedback}
-        overallRiskGroup={resultData.overallRiskGroup}
-        answers={resultData.answers}
-        riskByMean={resultData.riskGroups}
+        answers={answers}
+        section1Answers={section1Answers}
       />
 
       <Box

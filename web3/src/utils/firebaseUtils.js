@@ -91,9 +91,33 @@ export const saveUserData = async (data = {}) => {
         };
 
     // 3) 업서트 페이로드 구성 (빈 값 방지 및 표준화)
+    // web3 사회경제 정보 포함
     const payload = {
       name,
       birthDate: birthDate || "",
+      // 기본 정보
+      gender: data?.gender || "",
+      maritalStatus: data?.maritalStatus || "",
+      evaluationDate: data?.evaluationDate || "",
+      respondent: data?.respondent || "",
+      // 거주지 정보
+      residenceRegZip: data?.residenceRegZip || "",
+      residenceActual: data?.residenceActual || "",
+      // 가구/주거 정보
+      familyComposition: data?.familyComposition || [],
+      familyOther: data?.familyOther || "",
+      religion: data?.religion || "",
+      housingType: data?.housingType || "",
+      housingTypeOther: data?.housingTypeOther || "",
+      // 장애 정보
+      disability: data?.disability || "",
+      disabilityDetails: data?.disabilityDetails || "",
+      // 의료보장/지불재원 정보
+      insuranceType: data?.insuranceType || [],
+      paymentSource: data?.paymentSource || [],
+      privateInsuranceType: data?.privateInsuranceType || [],
+      otherPaymentSource: data?.otherPaymentSource || "",
+      // 암 정보
       cancerType: data?.cancerType || data?.cancer || "",
       diagnosisDate:
         data?.diagnosisDate ||
@@ -109,12 +133,10 @@ export const saveUserData = async (data = {}) => {
     };
 
     // 4) patients/{patientId}에만 저장 (guest-* 등 중복 생성 금지)
-    await setDoc(patientRef, { ...base, ...payload }, { merge: true });
+    const finalData = { ...base, ...payload };
+    await setDoc(patientRef, finalData, { merge: true });
 
-    console.log("[saveUserData] upserted patient", patientId, {
-      ...base,
-      ...payload,
-    });
+    console.log("[saveUserData] Saved patient", patientId, "to", COLLECTIONS.PATIENTS);
     return patientId;
   } catch (e) {
     console.error("[saveUserData] Error:", e);

@@ -1,5 +1,5 @@
 // src/component/Section2Component.js
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Box,
   FormControl,
@@ -20,20 +20,89 @@ const Section2Component = ({
   answers,
   setAnswers,
   missingQuestions = [],
+  section1Answers = {}, // Section1 답변을 받아서 조건부 렌더링
 }) => {
+  // Section1 답변에 따른 카테고리별 표시 여부 계산
+  const showCategory = {
+    재정: section1Answers.q1 === "예" || section1Answers.q7 === "예", // 공과금(q7)과 재정(q1) 통합
+    사회적고립: section1Answers.q2 === "예",
+    정신건강: section1Answers.q3 === "예",
+    주거: section1Answers.q4 === "예",
+    음식: section1Answers.q5 === "예",
+    교통: section1Answers.q6 === "예",
+    정보이해: section1Answers.q8 === "예",
+    폭력: section1Answers.q9 === "예",
+    고용: section1Answers.q10 === "예",
+    사회적지원: section1Answers.q11 === "예",
+    돌봄책임: section1Answers.q12 === "예",
+  };
+
+  // 슬라이더(q5) 초기값 설정: 정신건강 카테고리가 활성화되고 q5가 없으면 "1"로 초기화
+  useEffect(() => {
+    if (showCategory.정신건강 && !answers.q5) {
+      setAnswers((prev) => ({ ...prev, q5: "1" }));
+    }
+  }, [showCategory.정신건강, answers.q5, setAnswers]);
+
   // ===== 핸들러 =====
   const handleChange = (e) => {
     const { name: questionId, value } = e.target;
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
+  // radio-with-sub 전용 핸들러: 상위 선택 변경 시 모든 하위 선택지 초기화
+  const handleRadioWithSubChange = (questionId, options) => (e) => {
+    const { value } = e.target;
+    setAnswers((prev) => {
+      const newAnswers = { ...prev, [questionId]: value };
+      
+      // 모든 옵션의 하위 선택지 초기화
+      options.forEach((opt) => {
+        if (opt.subId) {
+          newAnswers[opt.subId] = opt.subType === "checkbox" ? [] : "";
+        }
+        if (opt.subOtherKey) {
+          newAnswers[opt.subOtherKey] = "";
+        }
+      });
+      
+      return newAnswers;
+    });
+  };
+
+  // yn-with-details 전용 핸들러: 예/아니오 변경 시 하위 선택지 초기화
+  const handleYnWithDetailsChange = (questionId, detailId, otherKey) => (e) => {
+    const { value } = e.target;
+    setAnswers((prev) => {
+      const newAnswers = { ...prev, [questionId]: value };
+      
+      // 하위 선택지 초기화
+      if (detailId) {
+        newAnswers[detailId] = [];
+      }
+      if (otherKey) {
+        newAnswers[otherKey] = "";
+      }
+      
+      return newAnswers;
+    });
+  };
+
   const handleCheck = (qid, value) => (e) => {
     const checked = e.target.checked;
     setAnswers((prev) => {
       const cur = Array.isArray(prev[qid]) ? prev[qid] : [];
-      const next = checked
-        ? [...new Set([...cur, value])]
+      
+      // "해당 사항 없음"(none)을 선택한 경우 다른 선택지 모두 해제
+      if (value === "none" && checked) {
+        return { ...prev, [qid]: ["none"] };
+      }
+      
+      // 다른 선택지를 선택한 경우 "해당 사항 없음" 해제
+      let next = checked
+        ? [...new Set([...cur.filter((v) => v !== "none"), value])]
         : cur.filter((v) => v !== value);
+      
       return { ...prev, [qid]: next };
     });
   };
@@ -117,21 +186,25 @@ const Section2Component = ({
 
   // ===== 질문 배열 (order로 정렬) =====
   // type: 'income-combo' | 'checkbox' | 'radio' | 'slider' | 'yn-with-details'
+  // category: Section1과 연동되는 카테고리
   const questions = [
+    // 재정 카테고리 (Section1 q1="예" OR q7="예")
     {
       id: "q1",
       order: 1,
       type: "income-combo",
+      category: "재정",
       label:
-        "1. 월 평균 가구 소득은 무엇입니까? (금액/가구원 수 입력 후 구간 선택)",
+        "월 평균 가구 소득은 무엇입니까? (금액/가구원 수 입력 후 구간 선택)",
       options: incomeOptions,
     },
     {
       id: "q2",
       order: 2,
       type: "checkbox",
+      category: "재정",
       label:
-        "2. 최근 3개월 동안 다음 항목 중 하나라도 지불하는 데 어려움이 있었습니까? (복수 선택)",
+        "최근 3개월 동안 다음 항목 중 하나라도 지불하는 데 어려움이 있었습니까? (복수 선택)",
       options: [
         { value: "food", label: "음식" },
         { value: "home", label: "주거" },
@@ -144,11 +217,13 @@ const Section2Component = ({
         { value: "none", label: "해당 사항 없음" },
       ],
     },
+    // 사회적 고립 카테고리 (Section1 q2="예")
     {
       id: "q3",
       order: 3,
       type: "radio",
-      label: "3. 얼마나 자주 외롭거나 주변으로부터 고립되어 있다고 느낍니까?",
+      category: "사회적고립",
+      label: "얼마나 자주 외롭거나 주변으로부터 고립되어 있다고 느낍니까?",
       options: [
         { value: "never", label: "전혀 느끼지 않는다" },
         { value: "some", label: "조금 느낀다" },
@@ -160,7 +235,8 @@ const Section2Component = ({
       id: "q4",
       order: 4,
       type: "radio",
-      label: "4. (최근 3개월) 친한 사람들과 얼마나 자주 만나거나 이야기합니까?",
+      category: "사회적고립",
+      label: "(최근 3개월) 친한 사람들과 얼마나 자주 만나거나 이야기합니까?",
       options: [
         { value: "m1", label: "월 1회 미만" },
         { value: "w1_2", label: "주 1–2회" },
@@ -168,11 +244,13 @@ const Section2Component = ({
         { value: "w5p", label: "주 5일 이상" },
       ],
     },
+    // 정신 건강 카테고리 (Section1 q3="예")
     {
       id: "q5",
       order: 5,
       type: "slider",
-      label: "5. 지난 일주일 동안 경험한 디스트레스는 어느 정도입니까?",
+      category: "정신건강",
+      label: "지난 일주일 동안 경험한 디스트레스는 어느 정도입니까?",
       slider: {
         min: 1,
         max: 10,
@@ -180,12 +258,14 @@ const Section2Component = ({
         help: "1=전혀 힘들지 않다 · 10=몹시 힘들다",
       },
     },
+    // 주거 카테고리 (Section1 q4="예")
     {
       id: "q6",
       order: 6,
       type: "radio",
+      category: "주거",
       label:
-        "6. 현재 주거 상황을 가장 잘 설명하는 것은 무엇입니까? (하나만 선택)",
+        "현재 주거 상황을 가장 잘 설명하는 것은 무엇입니까? (하나만 선택)",
       options: [
         { value: "alone", label: "본인 집에서 혼자 생활" },
         { value: "withFamily", label: "다른 사람(가족/룸메이트)과 함께 거주" },
@@ -198,18 +278,39 @@ const Section2Component = ({
       id: "q7",
       order: 7,
       type: "yn-with-details",
+      category: "주거",
       label:
-        "7. 주거 환경, 안전, 그리고 비용과 같이 현재 생활하는 곳에 대해 염려하는 부분이 있습니까?",
+        "주거 환경, 안전, 그리고 비용과 같이 현재 생활하는 곳에 대해 염려하는 부분이 있습니까?",
       detailId: "q7Details",
       detailLabel: "염려되는 항목을 모두 선택해 주세요. (복수 선택)",
       detailOptions: housingConcernOptions, // 포함: other
       otherKey: "q7Other", // 기타 텍스트 저장 키
     },
+    // 음식 카테고리 (Section1 q5="예") - 주거와도 연결 가능
+    {
+      id: "q7_food",
+      order: 7.5,
+      type: "yn-with-details",
+      category: "음식",
+      label:
+        "지난 3개월 동안, 신선하고 건강한 식품을 쉽게 얻을 수 있었나요?",
+      triggerValue: "N", // '아니오' 선택 시에만 하위 선택지 표시
+      detailId: "q7_foodDetails",
+      detailLabel: "해당하는 항목을 모두 선택해 주세요. (복수 선택)",
+      detailOptions: [
+        { value: "cost", label: "신선하고 건강한 먹거리를 구입할 비용의 부족" },
+        { value: "distance", label: "신선하고 건강한 식재료를 파는 곳이 집에서 먼 곳에 위치" },
+        { value: "other", label: "기타" },
+      ],
+      otherKey: "q7_foodOther", // 기타 텍스트 저장 키
+    },
+    // 교통 카테고리 (Section1 q6="예")
     {
       id: "q8",
       order: 8,
       type: "checkbox",
-      label: "8. 교통편 부족을 경험했다면, 그 이유는 무엇입니까? (복수 선택)",
+      category: "교통",
+      label: "교통편 부족을 경험했다면, 그 이유는 무엇입니까? (복수 선택)",
       options: [
         { value: "차량없음", label: "개인적으로 소유한 차량이 없음" },
         {
@@ -227,11 +328,12 @@ const Section2Component = ({
       ],
       otherKey: "q8Other",
     },
-    // 정보이해
+    // 정보이해 카테고리 (Section1 q8="예")
     {
       id: "q9",
       order: 9,
       type: "radio",
+      category: "정보이해",
       label: "최종학력은 무엇입니까?",
       options: [
         { value: "무학", label: "무학" },
@@ -246,6 +348,7 @@ const Section2Component = ({
       id: "q10",
       order: 10,
       type: "radio",
+      category: "정보이해",
       label: "전문의·의사/약사가 제공한 문서를 읽을 때 도움 필요 정도는?",
       options: [
         { value: "0", label: "전혀 필요하지 않았다(0점)" },
@@ -259,17 +362,19 @@ const Section2Component = ({
       id: "q11",
       order: 11,
       type: "radio",
+      category: "정보이해",
       label: "디지털 숙련도는 어느정도인가요?",
       options: [
         { value: "제한적", label: "제한적" },
         { value: "제한적이지 않음", label: "제한적이지 않음" },
       ],
     },
-    // 폭력
+    // 폭력 카테고리 (Section1 q9="예")
     {
       id: "q12",
       order: 12,
       type: "radio",
+      category: "폭력",
       label:
         "최근 3개월 이내에, 가족과 친구를 포함한 누구든 당신에게 신체적인 폭력을 행사한 적이 있나요?",
       options: [
@@ -284,6 +389,7 @@ const Section2Component = ({
       id: "q13",
       order: 13,
       type: "radio",
+      category: "폭력",
       label:
         "최근 3개월 이내에, 가족과 친구를 포함한 누구든 당신에게 욕설 등 언어적 폭력을 사용한 적이 있나요?",
       options: [
@@ -298,6 +404,7 @@ const Section2Component = ({
       id: "q14",
       order: 14,
       type: "radio",
+      category: "폭력",
       label:
         "최근 3개월 이내에, 가족과 친구를 포함한 누구든 당신에게 위협을 가한 적이 있나요?",
       options: [
@@ -308,47 +415,37 @@ const Section2Component = ({
         { value: "항상 있다", label: "항상 있다" },
       ],
     },
-    // 고용(메인)
+    // 고용 카테고리 (Section1 q10="예")
     {
       id: "q15",
       order: 15,
-      type: "radio",
+      type: "radio-with-sub",
+      category: "고용",
       label: "현재 고용 현황은 무엇입니까?",
       options: [
-        { value: "working", label: "일을 하고 있다" },
-        { value: "notWorking", label: "일을 하고 있지 않다" },
+        { 
+          value: "working", 
+          label: "일을 하고 있다",
+          subType: "radio",
+          subId: "q15_working_detail",
+          subOptions: workingDetailOptions,
+        },
+        { 
+          value: "notWorking", 
+          label: "일을 하고 있지 않다",
+          subType: "radio",
+          subId: "q15_notWorking_reasons",
+          subOptions: notWorkingReasonOptions,
+          subOtherKey: "q15_notWorking_other",
+        },
       ],
     },
-    // q15 하위: working → 라디오
-    {
-      id: "q15_working_detail_block",
-      order: 15.1,
-      type: "yn-with-details",
-      label: "", // 추가 제목 X
-      mainId: "q15",
-      triggerValue: "working",
-      detailType: "radio",
-      detailId: "q15_working_detail",
-      detailOptions: workingDetailOptions,
-    },
-    // q15 하위: notWorking → 체크박스(+기타)
-    {
-      id: "q15_notWorking_reasons_block",
-      order: 15.2,
-      type: "yn-with-details",
-      label: "", // 추가 제목 X
-      mainId: "q15",
-      triggerValue: "notWorking",
-      detailType: "radio",
-      detailId: "q15_notWorking_reasons",
-      detailOptions: notWorkingReasonOptions,
-      otherKey: "q15_notWorking_other",
-    },
-    // 사회적 지원
+    // 사회적 지원 카테고리 (Section1 q11="예")
     {
       id: "q16",
       order: 16,
       type: "radio",
+      category: "사회적지원",
       label: "도움이 필요할 때, 연락할 수 있는 사람이 있나요?",
       options: [
         { value: "Y", label: "예" },
@@ -359,6 +456,7 @@ const Section2Component = ({
       id: "q17",
       order: 17,
       type: "radio",
+      category: "사회적지원",
       label:
         "필요한 경우, 통원 시 동행 혹은 퇴원 후 간병(식사준비 등)을 해줄 사람이 있나요?",
       options: [
@@ -366,39 +464,48 @@ const Section2Component = ({
         { value: "N", label: "아니요" },
       ],
     },
-    // 돌봄책임
+    // 돌봄책임 카테고리 (Section1 q12="예")
     {
       id: "q18",
       order: 18,
-      type: "radio",
+      type: "radio-with-sub",
+      category: "돌봄책임",
       label: "가족 중 누군가를 보살피는 가족 돌봄 제공자인가요?",
       options: [
-        { value: "Y", label: "예" },
+        { 
+          value: "Y", 
+          label: "예",
+          subType: "checkbox",
+          subId: "q18Details",
+          subLabel: "돌봄 대상자를 모두 선택해 주세요. (복수 선택)",
+          subOptions: caregiverTargetOptions,
+          subOtherKey: "q18Other",
+        },
         { value: "N", label: "아니요" },
       ],
     },
-    // q18 하위: 예 선택 시 체크박스 4개
-    {
-      id: "q18_yes_details_block",
-      order: 18.1,
-      type: "yn-with-details",
-      label: "", // 추가 제목 X
-      mainId: "q18",
-      triggerValue: "Y",
-      detailType: "checkbox",
-      detailId: "q18Details",
-      detailLabel: "돌봄 대상자를 모두 선택해 주세요. (복수 선택)",
-      detailOptions: caregiverTargetOptions,
-      otherKey: "q18Other",
-    },
   ];
+
+  // 카테고리 표시 여부에 따라 질문 필터링
+  const filteredQuestions = questions.filter((q) => {
+    if (!q.category) return true; // 카테고리 없으면 항상 표시
+    return showCategory[q.category]; // 해당 카테고리가 활성화된 경우에만 표시
+  });
 
   // ===== 체크박스 렌더러 ('기타' 인라인 텍스트) =====
   const noOtherTextSet = new Set(["q2"]);
   const renderCheckboxWithInlineOther = (qid, opts, otherKey) => {
+    // 선택지 정렬: 일반 → 기타 → 해당 사항 없음
+    const sortedOpts = [...(opts || [])].sort((a, b) => {
+      const order = { none: 2, other: 1 }; // none이 마지막, other가 그 앞
+      const aOrder = order[a.value] ?? 0;
+      const bOrder = order[b.value] ?? 0;
+      return aOrder - bOrder;
+    });
+
     return (
       <FormGroup sx={{ mt: 0.5 }}>
-        {(opts || []).map((opt) => {
+        {sortedOpts.map((opt) => {
           const checked = (answers[qid] || []).includes(opt.value);
           const isOther = opt.value === "other";
           const showOther = isOther && checked;
@@ -412,34 +519,31 @@ const Section2Component = ({
                     color="primary"
                     checked={checked}
                     onChange={handleCheck(qid, opt.value)}
+                    sx={{ py: 0.5 }}
                   />
                 }
                 label={
-                  <Box sx={{ display: "block", width: "100%" }}>
+                  <Typography component="span" sx={{ lineHeight: 1.5 }}>
                     {opt.label}
-                    {showOther && !noOtherTextSet.has(qid) && (
-                      <Box
-                        sx={{ mt: 1 }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <TextField
-                          fullWidth
-                          label="기타 내용"
-                          placeholder="자세한 내용을 입력해 주세요"
-                          value={answers[otherStorageKey] || ""}
-                          onChange={handleText(otherStorageKey)}
-                        />
-                      </Box>
-                    )}
-                  </Box>
+                  </Typography>
                 }
                 sx={{
-                  alignItems: "flex-start",
-                  width: "100%",
-                  ".MuiFormControlLabel-label": { width: "100%" },
+                  alignItems: "center",
+                  my: 0.25,
                 }}
               />
+              {/* 기타 텍스트 필드: 체크박스 밖에서 들여쓰기하여 표시 */}
+              {showOther && !noOtherTextSet.has(qid) && (
+                <Box sx={{ ml: 4, mt: 0.5, mb: 1 }}>
+                  <TextField
+                    fullWidth
+                    label="기타 내용"
+                    placeholder="자세한 내용을 입력해 주세요"
+                    value={answers[otherStorageKey] || ""}
+                    onChange={handleText(otherStorageKey)}
+                  />
+                </Box>
+              )}
             </Box>
           );
         })}
@@ -673,6 +777,98 @@ const Section2Component = ({
           </FormControl>
         );
 
+      case "radio-with-sub":
+        // 라디오 버튼 + 선택에 따른 하위 질문
+        return (
+          <FormControl
+            key={q.id}
+            component="fieldset"
+            fullWidth
+            sx={wrapperSx}
+            id={q.id}
+          >
+            <FormLabel
+              component="legend"
+              sx={{
+                fontWeight: "bold",
+                color: missing ? "error.main" : "primary.main",
+                mb: 1,
+              }}
+            >
+              {q.label}
+              {missing && (
+                <Box
+                  component="span"
+                  sx={{ color: "error.main", fontWeight: "bold", ml: 1 }}
+                >
+                  ※ 필수 응답
+                </Box>
+              )}
+            </FormLabel>
+            <RadioGroup
+              name={q.id}
+              value={answers[q.id] || ""}
+              onChange={handleRadioWithSubChange(q.id, q.options || [])}
+            >
+              {(q.options || []).map((opt) => {
+                const isSelected = answers[q.id] === opt.value;
+                const hasSubOptions = opt.subOptions && opt.subOptions.length > 0;
+                
+                return (
+                  <Box key={opt.value}>
+                    <FormControlLabel
+                      value={opt.value}
+                      control={<Radio color="primary" />}
+                      label={opt.label}
+                      sx={{ my: 0.5 }}
+                    />
+                    {/* 선택된 옵션의 하위 질문 표시 */}
+                    {isSelected && hasSubOptions && (
+                      <Box sx={{ ml: 4, mt: 1, mb: 2, pl: 2, borderLeft: "2px solid #e0e0e0" }}>
+                        {opt.subLabel && (
+                          <FormLabel
+                            sx={{
+                              fontWeight: 600,
+                              color: "text.primary",
+                              mb: 1,
+                              display: "block",
+                            }}
+                          >
+                            {opt.subLabel}
+                          </FormLabel>
+                        )}
+                        {opt.subType === "radio" ? (
+                          <RadioGroup
+                            name={opt.subId}
+                            value={answers[opt.subId] || ""}
+                            onChange={handleChange}
+                          >
+                            {opt.subOptions.map((subOpt) => (
+                              <FormControlLabel
+                                key={subOpt.value}
+                                value={subOpt.value}
+                                control={<Radio color="primary" size="small" />}
+                                label={subOpt.label}
+                                sx={{ my: 0.25 }}
+                              />
+                            ))}
+                          </RadioGroup>
+                        ) : (
+                          renderCheckboxWithInlineOther(
+                            opt.subId,
+                            opt.subOptions,
+                            opt.subOtherKey
+                          )
+                        )}
+                      </Box>
+                    )}
+                  </Box>
+                );
+              })}
+            </RadioGroup>
+          </FormControl>
+        );
+
       case "yn-with-details": {
         // === 확장: mainId/triggerValue/detailType 지원 (q7은 기본 Y/N) ===
         const mainKey = q.mainId || q.id; // 기본은 자기 자신(q7)
@@ -686,11 +882,13 @@ const Section2Component = ({
           (Array.isArray(answers[q.detailId]) &&
             answers[q.detailId].length === 0);
 
-        // 미싱: 메인 비었거나, 펼친 상태인데 세부가 비었을 때
-        // 하위 블록인 경우 미싱 표시하지 않음 (부모 질문에서 검증)
-        const localMissing = isSubBlock
-          ? false
-          : !answers[mainKey] || (showDetails && detailsEmpty);
+        // 미싱: missingQuestions에 포함된 경우에만 표시 (제출 시도 후)
+        // 초기에는 missingQuestions가 비어있으므로 표시되지 않음
+        const localMissing = missingQuestions.length > 0 && (
+          isSubBlock
+            ? false
+            : missingQuestions.includes(q.id) || missingQuestions.includes(q.detailId)
+        );
 
         const localWrapperSx = {
           mb: 3,
@@ -743,32 +941,118 @@ const Section2Component = ({
               <RadioGroup
                 name={q.id}
                 value={answers[q.id] || ""}
-                onChange={handleChange}
-                row
+                onChange={handleYnWithDetailsChange(q.id, q.detailId, q.otherKey)}
               >
-                <FormControlLabel
-                  value="Y"
-                  control={<Radio color="primary" />}
-                  label="예"
-                />
-                <FormControlLabel
-                  value="N"
-                  control={<Radio color="primary" />}
-                  label="아니오"
-                />
+                {/* 예 선택지 */}
+                <Box>
+                  <FormControlLabel
+                    value="Y"
+                    control={<Radio color="primary" />}
+                    label="예"
+                  />
+                  {/* 트리거가 Y이고 Y가 선택되었을 때 하위 질문 표시 */}
+                  {trigger === "Y" && answers[q.id] === "Y" && (
+                    <Box sx={{ ml: 4, mt: 1, mb: 2, pl: 2, borderLeft: "2px solid #e0e0e0" }}>
+                      {q.detailLabel && (
+                        <FormLabel
+                          sx={{
+                            fontWeight: 600,
+                            color: "text.primary",
+                            mb: 1,
+                            display: "block",
+                          }}
+                        >
+                          {q.detailLabel}
+                        </FormLabel>
+                      )}
+                      {q.detailType === "radio" ? (
+                        <RadioGroup
+                          name={q.detailId}
+                          value={answers[q.detailId] || ""}
+                          onChange={handleChange}
+                        >
+                          {(q.detailOptions || []).map((opt) => (
+                            <FormControlLabel
+                              key={opt.value}
+                              value={opt.value}
+                              control={<Radio color="primary" size="small" />}
+                              label={opt.label}
+                              sx={{ my: 0.25 }}
+                            />
+                          ))}
+                        </RadioGroup>
+                      ) : (
+                        renderCheckboxWithInlineOther(
+                          q.detailId,
+                          q.detailOptions || [],
+                          q.otherKey
+                        )
+                      )}
+                    </Box>
+                  )}
+                </Box>
+                
+                {/* 아니오 선택지 */}
+                <Box>
+                  <FormControlLabel
+                    value="N"
+                    control={<Radio color="primary" />}
+                    label="아니오"
+                  />
+                  {/* 트리거가 N이고 N이 선택되었을 때 하위 질문 표시 */}
+                  {trigger === "N" && answers[q.id] === "N" && (
+                    <Box sx={{ ml: 4, mt: 1, mb: 2, pl: 2, borderLeft: "2px solid #e0e0e0" }}>
+                      {q.detailLabel && (
+                        <FormLabel
+                          sx={{
+                            fontWeight: 600,
+                            color: "text.primary",
+                            mb: 1,
+                            display: "block",
+                          }}
+                        >
+                          {q.detailLabel}
+                        </FormLabel>
+                      )}
+                      {q.detailType === "radio" ? (
+                        <RadioGroup
+                          name={q.detailId}
+                          value={answers[q.detailId] || ""}
+                          onChange={handleChange}
+                        >
+                          {(q.detailOptions || []).map((opt) => (
+                            <FormControlLabel
+                              key={opt.value}
+                              value={opt.value}
+                              control={<Radio color="primary" size="small" />}
+                              label={opt.label}
+                              sx={{ my: 0.25 }}
+                            />
+                          ))}
+                        </RadioGroup>
+                      ) : (
+                        renderCheckboxWithInlineOther(
+                          q.detailId,
+                          q.detailOptions || [],
+                          q.otherKey
+                        )
+                      )}
+                    </Box>
+                  )}
+                </Box>
               </RadioGroup>
             )}
 
-            {/* 세부 컨트롤: 트리거 값일 때만 노출 */}
-            {showDetails && (
-              <>
+            {/* 하위 블록(mainId가 다른 경우)의 세부 컨트롤 */}
+            {isSubBlock && showDetails && (
+              <Box sx={{ ml: 4, pl: 2, borderLeft: "2px solid #e0e0e0" }}>
                 {q.detailLabel && (
                   <FormLabel
                     sx={{
                       fontWeight: 600,
                       color: "text.primary",
                       mb: 1,
-                      mt: mainKey === q.id ? 2 : 0,
+                      display: "block",
                     }}
                   >
                     {q.detailLabel}
@@ -784,8 +1068,9 @@ const Section2Component = ({
                       <FormControlLabel
                         key={opt.value}
                         value={opt.value}
-                        control={<Radio color="primary" />}
+                        control={<Radio color="primary" size="small" />}
                         label={opt.label}
+                        sx={{ my: 0.25 }}
                       />
                     ))}
                   </RadioGroup>
@@ -796,7 +1081,7 @@ const Section2Component = ({
                     q.otherKey
                   )
                 )}
-              </>
+              </Box>
             )}
           </FormControl>
         );
@@ -816,7 +1101,7 @@ const Section2Component = ({
         boxShadow: 1,
       }}
     >
-      {questions
+      {filteredQuestions
         .slice()
         .sort((a, b) => a.order - b.order)
         .map((q) => renderQuestion(q))}

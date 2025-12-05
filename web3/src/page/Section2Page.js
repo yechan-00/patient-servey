@@ -1,5 +1,5 @@
 // src/pages/Section2Page.js
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Container,
@@ -9,7 +9,6 @@ import {
   Button,
   Alert,
   AlertTitle,
-  LinearProgress,
 } from "@mui/material";
 import Section2Component from "../component/Section2Component";
 
@@ -19,35 +18,79 @@ const Section2Page = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
   const userName = state?.name || localStorage.getItem("userName") || "";
+  const section1Answers = state?.answers || {}; // Section1에서 전달받은 답변
 
   const [answers, setAnswers] = useState({});
   const [error, setError] = useState(false);
   const [missingQuestions, setMissingQuestions] = useState([]);
-
-  const requiredSub12 = ["1", "2"].includes(answers.q12);
-  const requiredSub13 = ["4", "5"].includes(answers.q13);
-
-  const mainDone = ["q9", "q10", "q11"].filter((id) => answers[id]).length;
-  const sub12Done = requiredSub12 && answers.q12_reasons?.length > 0 ? 1 : 0;
-  const sub13Ids = [
-    "q13_1_1",
-    "q13_1_2",
-    "q13_1_3",
-    "q13_1_4",
-    "q13_1_5",
-    "q13_1_6",
-  ];
-  const sub13Done = requiredSub13
-    ? sub13Ids.filter((id) => answers[id]).length
-    : 0;
-  const doneCount = mainDone + sub12Done + sub13Done;
-  const totalCount =
-    3 + (requiredSub12 ? 1 : 0) + (requiredSub13 ? sub13Ids.length : 0);
-
-  const mainProgressCount =
-    mainDone + (answers.q12 ? 1 : 0) + (answers.q13 ? 1 : 0);
-  const progressPercentage = (mainProgressCount / 5) * 100;
   const currentStep = 1;
+
+  // Section1 답변에 따른 카테고리별 표시 여부 계산
+  const showCategory = {
+    재정: section1Answers.q1 === "예" || section1Answers.q7 === "예",
+    사회적고립: section1Answers.q2 === "예",
+    정신건강: section1Answers.q3 === "예",
+    주거: section1Answers.q4 === "예",
+    음식: section1Answers.q5 === "예",
+    교통: section1Answers.q6 === "예",
+    정보이해: section1Answers.q8 === "예",
+    폭력: section1Answers.q9 === "예",
+    고용: section1Answers.q10 === "예",
+    사회적지원: section1Answers.q11 === "예",
+    돌봄책임: section1Answers.q12 === "예",
+  };
+
+  // 필수 질문 목록 (카테고리에 따라 동적으로 생성)
+  const getRequiredQuestions = () => {
+    const required = [];
+    
+    // 재정 카테고리
+    if (showCategory.재정) {
+      required.push("q1", "q1Amount", "q1Household", "q2");
+    }
+    // 사회적 고립 카테고리
+    if (showCategory.사회적고립) {
+      required.push("q3", "q4");
+    }
+    // 정신 건강 카테고리
+    if (showCategory.정신건강) {
+      required.push("q5");
+    }
+    // 주거 카테고리
+    if (showCategory.주거) {
+      required.push("q6", "q7");
+    }
+    // 음식 카테고리
+    if (showCategory.음식) {
+      required.push("q7_food");
+    }
+    // 교통 카테고리
+    if (showCategory.교통) {
+      required.push("q8");
+    }
+    // 정보이해 카테고리
+    if (showCategory.정보이해) {
+      required.push("q9", "q10", "q11");
+    }
+    // 폭력 카테고리
+    if (showCategory.폭력) {
+      required.push("q12", "q13", "q14");
+    }
+    // 고용 카테고리
+    if (showCategory.고용) {
+      required.push("q15");
+    }
+    // 사회적 지원 카테고리
+    if (showCategory.사회적지원) {
+      required.push("q16", "q17");
+    }
+    // 돌봄책임 카테고리
+    if (showCategory.돌봄책임) {
+      required.push("q18");
+    }
+    
+    return required;
+  };
 
   // 미응답 문항으로 스크롤하는 함수
   const scrollToFirstMissing = (missing) => {
@@ -63,39 +106,54 @@ const Section2Page = () => {
   };
 
   const handleNext = () => {
-    // 기본 필수 문항들
-    let requiredQuestions = ["q9", "q10", "q11", "q12", "q13"];
+    const requiredQuestions = getRequiredQuestions();
     let missing = [];
 
-    // 9, 10, 11번 필수 체크
-    ["q9", "q10", "q11"].forEach((q) => {
-      if (
-        !answers[q] ||
-        (typeof answers[q] === "string" && answers[q].trim() === "")
-      ) {
-        missing.push(q);
+    requiredQuestions.forEach((qId) => {
+      const answer = answers[qId];
+      
+      // 체크박스 타입 (배열)
+      if (Array.isArray(answer)) {
+        if (answer.length === 0) {
+          missing.push(qId);
+        }
+      }
+      // 문자열 또는 숫자 타입
+      else if (!answer || (typeof answer === "string" && answer.trim() === "")) {
+        missing.push(qId);
       }
     });
 
-    // q12 체크
-    if (!answers.q12) missing.push("q12");
-
-    // q13 체크
-    if (!answers.q13) missing.push("q13");
-
-    // q12가 1,2인 경우 q12_reasons 필요
-    if (
-      ["1", "2"].includes(answers.q12) &&
-      (!answers.q12_reasons || answers.q12_reasons.length === 0)
-    ) {
-      missing.push("q12_reasons"); // 실제 ID가 없지만 에러 표시용
+    // yn-with-details 타입의 하위 질문 체크 (표시될 때만 필수)
+    // q7: "Y" 선택 시 q7Details 필수
+    if (showCategory.주거 && answers.q7 === "Y") {
+      if (!answers.q7Details || answers.q7Details.length === 0) {
+        missing.push("q7Details");
+      }
     }
-
-    // q13이 4,5인 경우 서브 문항들 필요
-    if (["4", "5"].includes(answers.q13)) {
-      sub13Ids.forEach((id) => {
-        if (!answers[id]) missing.push(id);
-      });
+    // q7_food: "N" 선택 시 q7_foodDetails 필수
+    if (showCategory.음식 && answers.q7_food === "N") {
+      if (!answers.q7_foodDetails || answers.q7_foodDetails.length === 0) {
+        missing.push("q7_foodDetails");
+      }
+    }
+    // q15: working 선택 시 q15_working_detail 필수
+    if (showCategory.고용 && answers.q15 === "working") {
+      if (!answers.q15_working_detail) {
+        missing.push("q15_working_detail");
+      }
+    }
+    // q15: notWorking 선택 시 q15_notWorking_reasons 필수
+    if (showCategory.고용 && answers.q15 === "notWorking") {
+      if (!answers.q15_notWorking_reasons) {
+        missing.push("q15_notWorking_reasons");
+      }
+    }
+    // q18: "Y" 선택 시 q18Details 필수
+    if (showCategory.돌봄책임 && answers.q18 === "Y") {
+      if (!answers.q18Details || answers.q18Details.length === 0) {
+        missing.push("q18Details");
+      }
     }
 
     if (missing.length > 0) {
@@ -105,15 +163,18 @@ const Section2Page = () => {
       return;
     }
 
-    navigate("/section3", { state: { name: userName, answers } });
+    // section1Answers를 localStorage에도 저장
+    localStorage.setItem("section1Answers", JSON.stringify(section1Answers));
+    
+    navigate("/survey-result", { 
+      state: { 
+        name: userName, 
+        answers,
+        section1Answers 
+      } 
+    });
   };
 
-  useEffect(() => {
-    if (doneCount === totalCount) {
-      setError(false);
-      setMissingQuestions([]);
-    }
-  }, [doneCount, totalCount]);
 
   return (
     <Container
@@ -179,17 +240,6 @@ const Section2Page = () => {
           {steps[currentStep]}
         </Typography>
 
-        <Box sx={{ mb: 3 }}>
-          <LinearProgress variant="determinate" value={progressPercentage} />
-          <Typography
-            variant="body2"
-            align="right"
-            sx={{ mt: 1, color: "text.secondary" }}
-          >
-            진행 상황: {mainProgressCount}/5
-          </Typography>
-        </Box>
-
         <Section2Component
           name={userName}
           answers={answers}
@@ -197,6 +247,7 @@ const Section2Page = () => {
           setValidationError={setError}
           validationError={error}
           missingQuestions={missingQuestions}
+          section1Answers={section1Answers}
         />
 
         {error && (
@@ -217,11 +268,11 @@ const Section2Page = () => {
         )}
 
         <Box sx={{ display: "flex", justifyContent: "space-between", mt: 4 }}>
-          <Button variant="outlined" onClick={() => navigate("/section1")}>
+          <Button variant="outlined" onClick={() => navigate("/section1", { state: { name: userName } })}>
             이전
           </Button>
           <Button variant="contained" onClick={handleNext}>
-            다음
+            완료
           </Button>
         </Box>
       </Paper>

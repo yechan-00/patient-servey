@@ -101,8 +101,8 @@ const SurveyForm = () => {
   const [disability, setDisability] = useState(""); // 예/아니오
   const [disabilityDetails, setDisabilityDetails] = useState("");
 
-  // 의료보장 유형(목록)
-  const [insuranceType, setInsuranceType] = useState(""); // 건강보험/의료급여/기타
+  // 의료보장 유형(복수 선택 가능)
+  const [insuranceType, setInsuranceType] = useState([]); // 건강보험/의료급여/차상위/일반
 
   // 지불재원: 민간보험 선택 시 실손/보장성 세부, 기타 시 텍스트
   const [paymentSource, setPaymentSource] = useState([]); // 본인 부담/민간보험/기타
@@ -110,6 +110,7 @@ const SurveyForm = () => {
   const [otherPaymentSource, setOtherPaymentSource] = useState("");
 
   const [errors, setErrors] = useState({});
+  const [submitted, setSubmitted] = useState(false); // 제출 시도 후에만 오류 표시
 
   // ---------- draft load ----------
   useEffect(() => {
@@ -261,12 +262,15 @@ const SurveyForm = () => {
     if (disability === "예" && !disabilityDetails)
       mark("disabilityDetails", "장애 관련 세부 내용을 입력해주세요.");
 
-    if (!insuranceType) mark("insuranceType", "의료보장 유형을 선택해주세요.");
+    if (!Array.isArray(insuranceType) || insuranceType.length === 0)
+      mark("insuranceType", "의료보장 유형을 선택해주세요.");
 
-    if (!paymentSource) mark("paymentSource", "지불재원을 선택해주세요.");
-    if (paymentSource === "민간보험" && !privateInsuranceType)
+    if (!Array.isArray(paymentSource) || paymentSource.length === 0)
+      mark("paymentSource", "지불재원을 선택해주세요.");
+    if (Array.isArray(paymentSource) && paymentSource.includes("민간보험") && 
+        (!Array.isArray(privateInsuranceType) || privateInsuranceType.length === 0))
       mark("privateInsuranceType", "민간보험 유형을 선택해주세요.");
-    if (paymentSource === "기타" && !otherPaymentSource)
+    if (Array.isArray(paymentSource) && paymentSource.includes("기타") && !otherPaymentSource)
       mark("otherPaymentSource", "기타 지불재원을 입력해주세요.");
 
     setErrors(newErrors);
@@ -276,6 +280,7 @@ const SurveyForm = () => {
   // ---------- submit ----------
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitted(true); // 제출 시도 표시
     const { ok, firstKey } = validate();
     if (!ok) {
       if (firstKey) focusFirstInvalid(firstKey);
@@ -358,8 +363,8 @@ const SurveyForm = () => {
                 fullWidth
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                error={!!errors.name}
-                helperText={errors.name}
+                error={submitted && !!errors.name}
+                helperText={submitted ? errors.name : ""}
                 sx={{ minHeight: "72px" }}
               />
             </Grid>
@@ -380,8 +385,8 @@ const SurveyForm = () => {
                   pattern: "\\d{8}",
                   maxLength: 8,
                 }}
-                error={!!errors.birthDate}
-                helperText={errors.birthDate}
+                error={submitted && !!errors.birthDate}
+                helperText={submitted ? errors.birthDate : ""}
                 sx={{ minHeight: "72px" }}
               />
             </Grid>
@@ -390,7 +395,7 @@ const SurveyForm = () => {
             <Grid item xs={12}>
               <FormControl
                 fullWidth
-                error={!!errors.gender}
+                error={submitted && !!errors.gender}
                 sx={{ minHeight: "72px" }}
               >
                 <InputLabel>성별</InputLabel>
@@ -451,7 +456,7 @@ const SurveyForm = () => {
                     fullWidth
                     value={residenceActual}
                     onChange={(e) => setResidenceActual(e.target.value)}
-                    error={!!errors.residenceActual}
+                    error={submitted && !!errors.residenceActual}
                     helperText={errors.residenceActual}
                   />
                 </Grid>
@@ -465,7 +470,7 @@ const SurveyForm = () => {
               </Typography>
               <FormControl
                 fullWidth
-                error={!!errors.maritalStatus}
+                error={submitted && !!errors.maritalStatus}
                 sx={{ minHeight: "72px" }}
               >
                 <InputLabel>결혼 상태</InputLabel>
@@ -521,7 +526,7 @@ const SurveyForm = () => {
                   value={familyOther}
                   onChange={(e) => setFamilyOther(e.target.value)}
                   sx={{ mt: 1 }}
-                  error={!!errors.familyOther}
+                  error={submitted && !!errors.familyOther}
                   helperText={errors.familyOther}
                 />
               )}
@@ -560,7 +565,7 @@ const SurveyForm = () => {
               </Typography>
               <FormControl
                 fullWidth
-                error={!!errors.housingType}
+                error={submitted && !!errors.housingType}
                 sx={{ minHeight: "72px" }}
               >
                 <InputLabel>주거형태</InputLabel>
@@ -592,7 +597,7 @@ const SurveyForm = () => {
                   value={housingTypeOther}
                   onChange={(e) => setHousingTypeOther(e.target.value)}
                   sx={{ mt: 1 }}
-                  error={!!errors.housingTypeOther}
+                  error={submitted && !!errors.housingTypeOther}
                   helperText={errors.housingTypeOther}
                 />
               )}
@@ -605,7 +610,7 @@ const SurveyForm = () => {
               </Typography>
               <FormControl
                 fullWidth
-                error={!!errors.disability}
+                error={submitted && !!errors.disability}
                 sx={{ minHeight: "72px" }}
               >
                 <InputLabel>장애 여부</InputLabel>
@@ -628,92 +633,206 @@ const SurveyForm = () => {
                   value={disabilityDetails}
                   onChange={(e) => setDisabilityDetails(e.target.value)}
                   sx={{ mt: 1 }}
-                  error={!!errors.disabilityDetails}
+                  error={submitted && !!errors.disabilityDetails}
                   helperText={errors.disabilityDetails}
                 />
               )}
             </Grid>
 
-            {/* 의료보장 유형 */}
+            {/* 의료보장 유형 (복수 선택 가능) */}
             <Grid item xs={12}>
               <Typography variant="subtitle1" sx={{ mb: 0.5, fontWeight: 600 }}>
-                의료보장 유형
+                의료보장 유형 (해당하는 모든 항목 선택)
               </Typography>
-              <FormControl
-                fullWidth
-                error={!!errors.insuranceType}
-                sx={{ minHeight: "72px" }}
-              >
-                <InputLabel>의료보장 유형</InputLabel>
-                <Select
-                  value={insuranceType}
-                  onChange={(e) => setInsuranceType(e.target.value)}
-                  label="의료보장 유형"
-                >
-                  <MenuItem value="건강보험">국민건강보험</MenuItem>
-                  <MenuItem value="차상위">차상위</MenuItem>
-                  <MenuItem value="의료급여">의료급여</MenuItem>
-                  <MenuItem value="일반">일반</MenuItem>
-                </Select>
-                <FormHelperText>{errors.insuranceType}</FormHelperText>
-              </FormControl>
+              <FormGroup>
+                {[
+                  { value: "건강보험", label: "국민건강보험" },
+                  { value: "차상위", label: "차상위" },
+                  { value: "의료급여", label: "의료급여" },
+                  { value: "일반", label: "일반" },
+                ].map((opt) => (
+                  <FormControlLabel
+                    key={opt.value}
+                    control={
+                      <Checkbox
+                        checked={Array.isArray(insuranceType) ? insuranceType.includes(opt.value) : insuranceType === opt.value}
+                        onChange={(e, checked) => {
+                          setInsuranceType((prev) => {
+                            const arr = Array.isArray(prev) ? prev : (prev ? [prev] : []);
+                            return checked
+                              ? arr.includes(opt.value) ? arr : [...arr, opt.value]
+                              : arr.filter((v) => v !== opt.value);
+                          });
+                        }}
+                        size="small"
+                      />
+                    }
+                    label={opt.label}
+                    sx={{ my: 0.25 }}
+                  />
+                ))}
+              </FormGroup>
+              {submitted && errors.insuranceType && (
+                <FormHelperText error>{errors.insuranceType}</FormHelperText>
+              )}
             </Grid>
 
-            {/* 지불재원 */}
+            {/* 지불재원 (복수 선택 가능) */}
             <Grid item xs={12}>
               <Typography variant="subtitle1" sx={{ mb: 0.5, fontWeight: 600 }}>
-                지불재원
+                지불재원 (해당하는 모든 항목 선택)
               </Typography>
-              <FormControl
-                fullWidth
-                error={!!errors.paymentSource}
-                sx={{ minHeight: "72px" }}
-              >
-                <InputLabel>지불재원</InputLabel>
-                <Select
-                  value={paymentSource}
-                  onChange={(e) => setPaymentSource(e.target.value)}
-                  label="지불재원"
-                >
-                  <MenuItem value="본인 부담">본인 부담</MenuItem>
-                  <MenuItem value="민간보험">민간보험</MenuItem>
-                  <MenuItem value="민간보험">국가 및 민간 지원금</MenuItem>
-                  <MenuItem value="기타">기타</MenuItem>
-                </Select>
-                <FormHelperText>{errors.paymentSource}</FormHelperText>
-              </FormControl>
-
-              {paymentSource === "민간보험" && (
-                <FormControl
-                  fullWidth
-                  error={!!errors.privateInsuranceType}
-                  sx={{ mt: 1 }}
-                >
-                  <InputLabel>민간보험 유형</InputLabel>
-                  <Select
-                    value={privateInsuranceType}
-                    onChange={(e) => setPrivateInsuranceType(e.target.value)}
-                    label="민간보험 유형"
-                  >
-                    <MenuItem value="실손 보험">실손 보험</MenuItem>
-                    <MenuItem value="보장성 보험">보장성 보험</MenuItem>
-                  </Select>
-                  <FormHelperText>{errors.privateInsuranceType}</FormHelperText>
-                </FormControl>
-              )}
-
-              {paymentSource === "기타" && (
-                <TextField
-                  inputRef={setFieldRef("otherPaymentSource")}
-                  fullWidth
-                  label="기타 지불재원"
-                  placeholder="지불재원을 입력하세요"
-                  value={otherPaymentSource}
-                  onChange={(e) => setOtherPaymentSource(e.target.value)}
-                  sx={{ mt: 1 }}
-                  error={!!errors.otherPaymentSource}
-                  helperText={errors.otherPaymentSource}
+              <FormGroup>
+                {/* 본인 부담 */}
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={Array.isArray(paymentSource) && paymentSource.includes("본인 부담")}
+                      onChange={(e, checked) => {
+                        setPaymentSource((prev) => {
+                          const arr = Array.isArray(prev) ? prev : [];
+                          return checked
+                            ? arr.includes("본인 부담") ? arr : [...arr, "본인 부담"]
+                            : arr.filter((v) => v !== "본인 부담");
+                        });
+                      }}
+                      size="small"
+                    />
+                  }
+                  label="본인 부담"
+                  sx={{ my: 0.25 }}
                 />
+
+                {/* 민간보험 */}
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={Array.isArray(paymentSource) && paymentSource.includes("민간보험")}
+                      onChange={(e, checked) => {
+                        setPaymentSource((prev) => {
+                          const arr = Array.isArray(prev) ? prev : [];
+                          if (checked) {
+                            return arr.includes("민간보험") ? arr : [...arr, "민간보험"];
+                          } else {
+                            setPrivateInsuranceType([]);
+                            return arr.filter((v) => v !== "민간보험");
+                          }
+                        });
+                      }}
+                      size="small"
+                    />
+                  }
+                  label="민간보험"
+                  sx={{ my: 0.25 }}
+                />
+                {/* 민간보험 하위 선택지 - 들여쓰기 */}
+                {Array.isArray(paymentSource) && paymentSource.includes("민간보험") && (
+                  <Box sx={{ ml: 4, mb: 1 }}>
+                    <FormGroup row>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={Array.isArray(privateInsuranceType) && privateInsuranceType.includes("실손 보험")}
+                            onChange={(e, checked) => {
+                              setPrivateInsuranceType((prev) => {
+                                const arr = Array.isArray(prev) ? prev : [];
+                                return checked
+                                  ? arr.includes("실손 보험") ? arr : [...arr, "실손 보험"]
+                                  : arr.filter((v) => v !== "실손 보험");
+                              });
+                            }}
+                            size="small"
+                          />
+                        }
+                        label="실손 보험"
+                        sx={{ my: 0 }}
+                      />
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={Array.isArray(privateInsuranceType) && privateInsuranceType.includes("보장성 보험")}
+                            onChange={(e, checked) => {
+                              setPrivateInsuranceType((prev) => {
+                                const arr = Array.isArray(prev) ? prev : [];
+                                return checked
+                                  ? arr.includes("보장성 보험") ? arr : [...arr, "보장성 보험"]
+                                  : arr.filter((v) => v !== "보장성 보험");
+                              });
+                            }}
+                            size="small"
+                          />
+                        }
+                        label="보장성 보험"
+                        sx={{ my: 0 }}
+                      />
+                    </FormGroup>
+                    {errors.privateInsuranceType && (
+                      <FormHelperText error sx={{ ml: 0 }}>{errors.privateInsuranceType}</FormHelperText>
+                    )}
+                  </Box>
+                )}
+
+                {/* 국가 및 민간 지원금 */}
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={Array.isArray(paymentSource) && paymentSource.includes("국가 및 민간 지원금")}
+                      onChange={(e, checked) => {
+                        setPaymentSource((prev) => {
+                          const arr = Array.isArray(prev) ? prev : [];
+                          return checked
+                            ? arr.includes("국가 및 민간 지원금") ? arr : [...arr, "국가 및 민간 지원금"]
+                            : arr.filter((v) => v !== "국가 및 민간 지원금");
+                        });
+                      }}
+                      size="small"
+                    />
+                  }
+                  label="국가 및 민간 지원금"
+                  sx={{ my: 0.25 }}
+                />
+
+                {/* 기타 */}
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={Array.isArray(paymentSource) && paymentSource.includes("기타")}
+                      onChange={(e, checked) => {
+                        setPaymentSource((prev) => {
+                          const arr = Array.isArray(prev) ? prev : [];
+                          if (checked) {
+                            return arr.includes("기타") ? arr : [...arr, "기타"];
+                          } else {
+                            setOtherPaymentSource("");
+                            return arr.filter((v) => v !== "기타");
+                          }
+                        });
+                      }}
+                      size="small"
+                    />
+                  }
+                  label="기타"
+                  sx={{ my: 0.25 }}
+                />
+                {/* 기타 하위 입력 - 들여쓰기 */}
+                {Array.isArray(paymentSource) && paymentSource.includes("기타") && (
+                  <Box sx={{ ml: 4, mb: 1 }}>
+                    <TextField
+                      inputRef={setFieldRef("otherPaymentSource")}
+                      fullWidth
+                      size="small"
+                      label="기타 지불재원"
+                      placeholder="지불재원을 입력하세요"
+                      value={otherPaymentSource}
+                      onChange={(e) => setOtherPaymentSource(e.target.value)}
+                      error={submitted && !!errors.otherPaymentSource}
+                      helperText={errors.otherPaymentSource}
+                    />
+                  </Box>
+                )}
+              </FormGroup>
+              {errors.paymentSource && (
+                <FormHelperText error>{errors.paymentSource}</FormHelperText>
               )}
             </Grid>
           </Grid>
