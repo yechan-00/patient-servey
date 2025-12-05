@@ -89,9 +89,6 @@ function LoginPage() {
           <p className="info-text">
             <strong>환자용:</strong> patient / patient123
           </p>
-          <p className="info-text">
-            <strong>의료진용:</strong> medical / medical123
-          </p>
         </div>
       </div>
     </div>
